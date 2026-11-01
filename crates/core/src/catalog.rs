@@ -1,6 +1,7 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::manifest::Manifest;
+use crate::manifest::{Identity, Manifest};
+use crate::trust::TrustedKeys;
 
 pub const OWNER: &str = "T-G0W";
 pub const TOPIC: &str = "tgow-launcher";
@@ -9,7 +10,7 @@ pub const MANIFEST_FILE: &str = "tgow-release.json";
 pub const LEGACY_MANIFEST_FILE: &str = "latest.json";
 pub const SIGNATURE_SUFFIX: &str = ".sig";
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Repository {
     pub name: String,
     pub full_name: String,
@@ -111,6 +112,61 @@ impl App {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    Current,
+    Legacy,
+}
+
+impl Format {
+    #[must_use]
+    pub fn file(self) -> &'static str {
+        match self {
+            Self::Current => MANIFEST_FILE,
+            Self::Legacy => LEGACY_MANIFEST_FILE,
+        }
+    }
+
+    fn keys(self) -> TrustedKeys {
+        match self {
+            Self::Current => TrustedKeys::release(),
+            Self::Legacy => TrustedKeys::legacy(),
+        }
+    }
+}
+
+#[must_use]
+pub fn evaluate(
+    repository: &Repository,
+    tag: &str,
+    format: Format,
+    manifest: &[u8],
+    signature: &str,
+) -> ReleaseState {
+    if let Err(error) = format.keys().verify(manifest, signature) {
+        return ReleaseState::Rejected(error.to_string());
+    }
+    let app = repository.app_id();
+    let name = repository.display_name();
+    match Manifest::parse(
+        manifest,
+        Identity {
+            app: &app,
+            name: &name,
+        },
+    ) {
+        Ok(parsed) if !parsed.matches_tag(tag) => ReleaseState::Rejected(format!(
+            "manifest version {} does not match tag {tag}",
+            parsed.version
+        )),
+        Ok(parsed) if format == Format::Legacy && parsed.schema != 0 => {
+            ReleaseState::Rejected("legacy file carries a current manifest".to_owned())
+        }
+        Ok(parsed) => ReleaseState::Verified(Box::new(parsed)),
+        Err(error) => ReleaseState::Rejected(error.to_string()),
+    }
+}
+
 #[must_use]
 pub fn latest_url(repository: &str) -> String {
     format!("https://github.com/{OWNER}/{repository}/releases/latest")
@@ -146,7 +202,39 @@ fn is_repository_name(name: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{download_url, listed_repositories, tag_from_location};
+    use super::{
+        Format, ReleaseState, Repository, download_url, evaluate, listed_repositories,
+        tag_from_location,
+    };
+
+    fn ferrovox() -> Repository {
+        listed_repositories(LISTING.as_bytes()).unwrap().remove(0)
+    }
+
+    const MANIFEST: &[u8] = include_bytes!("../tests/data/ferrovox-1.0.2/latest.json");
+    const SIGNATURE: &str = include_str!("../tests/data/ferrovox-1.0.2/latest.json.sig");
+
+    #[test]
+    fn verifies_the_real_ferrovox_release_end_to_end() {
+        let state = evaluate(&ferrovox(), "v1.0.2", Format::Legacy, MANIFEST, SIGNATURE);
+        let ReleaseState::Verified(manifest) = state else {
+            panic!("{state:?}");
+        };
+        assert_eq!(manifest.app, "ferrovox");
+        assert_eq!(manifest.name, "Ferrovox");
+    }
+
+    #[test]
+    fn rejects_wrong_tags_keys_and_formats() {
+        assert!(matches!(
+            evaluate(&ferrovox(), "v1.0.3", Format::Legacy, MANIFEST, SIGNATURE),
+            ReleaseState::Rejected(_)
+        ));
+        assert!(matches!(
+            evaluate(&ferrovox(), "v1.0.2", Format::Current, MANIFEST, SIGNATURE),
+            ReleaseState::Rejected(_)
+        ));
+    }
 
     const LISTING: &str = r#"[
         {"name":"ferrovox","full_name":"T-G0W/ferrovox","description":"Soundboard","topics":["rust","tgow-launcher"],"archived":false,"fork":false,"html_url":"https://github.com/T-G0W/ferrovox"},

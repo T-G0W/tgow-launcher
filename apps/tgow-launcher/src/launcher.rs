@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use egui::{Context, OpenUrl, Ui};
 use tgow_core::catalog::App;
 use tgow_core::platform::Platform;
@@ -5,6 +7,9 @@ use tgow_core::settings::{Settings, WindowGeometry};
 use tgow_platform::paths::Paths;
 use tgow_platform::storage;
 use tgow_ui::shell::{CatalogStatus, Effect, Shell, View};
+use tgow_ui::text;
+
+use crate::backend::{Backend, Command, Event};
 
 pub(crate) struct Launcher {
     shell: Shell,
@@ -15,12 +20,20 @@ pub(crate) struct Launcher {
     system_reduced_motion: bool,
     apps: Vec<App>,
     status: CatalogStatus,
-    checked: Option<String>,
+    checked_at: Option<Instant>,
+    backend: Backend,
+    interval: u32,
 }
 
 impl Launcher {
     pub(crate) fn new(ctx: &Context, paths: Option<Paths>, settings: Settings) -> Self {
         tgow_ui::theme::install(ctx);
+        let interval = settings.check_interval_minutes;
+        let backend = Backend::start(
+            ctx.clone(),
+            paths.as_ref().map(|paths| paths.cache.join("catalog.json")),
+            minutes(interval),
+        );
         Self {
             shell: Shell::default(),
             settings,
@@ -29,8 +42,10 @@ impl Launcher {
             locale: tgow_platform::system_locale(),
             system_reduced_motion: tgow_platform::prefers_reduced_motion(),
             apps: Vec::new(),
-            status: CatalogStatus::Ready,
-            checked: None,
+            status: CatalogStatus::Loading,
+            checked_at: None,
+            backend,
+            interval,
         }
     }
 
@@ -70,8 +85,15 @@ impl Launcher {
             match effect {
                 Effect::Open(url) => ctx.open_url(OpenUrl::new_tab(url)),
                 Effect::Copy(text) => ctx.copy_text(text),
-                Effect::SettingsChanged => self.save_settings(),
-                Effect::CheckNow | Effect::Install(_) => {}
+                Effect::SettingsChanged => {
+                    self.save_settings();
+                    if self.settings.check_interval_minutes != self.interval {
+                        self.interval = self.settings.check_interval_minutes;
+                        self.backend.send(Command::Interval(minutes(self.interval)));
+                    }
+                }
+                Effect::CheckNow => self.backend.send(Command::Refresh),
+                Effect::Install(_) => {}
             }
         }
     }
@@ -80,15 +102,25 @@ impl Launcher {
 impl eframe::App for Launcher {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        for event in self.backend.poll() {
+            match event {
+                Event::Apps(apps) => self.apps = apps,
+                Event::Status(status) => self.status = status,
+                Event::Checked => self.checked_at = Some(Instant::now()),
+            }
+        }
         let reduced = self.settings.motion.is_reduced(self.system_reduced_motion);
         tgow_ui::widgets::set_reduced_motion(&ctx, reduced);
         let language = self.settings.language.resolve(self.locale.as_deref());
+        let checked = self
+            .checked_at
+            .map(|at| text::minutes_ago(language, at.elapsed().as_secs() / 60));
         let view = View {
             language,
             platform: &self.platform,
             apps: &self.apps,
             status: self.status.clone(),
-            checked: self.checked.as_deref(),
+            checked: checked.as_deref(),
             version: env!("CARGO_PKG_VERSION"),
         };
         let effects = self.shell.show(ui, &view, &mut self.settings);
@@ -103,4 +135,8 @@ impl eframe::App for Launcher {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
         egui::Rgba::from(tgow_ui::theme::BG).to_array()
     }
+}
+
+fn minutes(value: u32) -> Duration {
+    Duration::from_secs(u64::from(value) * 60)
 }

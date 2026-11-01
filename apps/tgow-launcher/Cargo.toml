@@ -10,10 +10,13 @@ publish.workspace = true
 
 [dependencies]
 tgow-core.workspace = true
+tgow-net.workspace = true
 tgow-platform.workspace = true
 tgow-ui.workspace = true
 eframe = { workspace = true, features = ["clipboard", "links"] }
 egui.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

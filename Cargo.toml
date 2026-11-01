@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "crates/platform", "crates/ui", "apps/tgow-launcher", "xtask"]
+members = ["crates/core", "crates/net", "crates/platform", "crates/ui", "apps/tgow-launcher", "xtask"]
 default-members = ["apps/tgow-launcher"]
 
 [workspace.package]

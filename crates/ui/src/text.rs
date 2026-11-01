@@ -236,6 +236,16 @@ impl Text {
     }
 }
 
+#[must_use]
+pub fn minutes_ago(language: Language, minutes: u64) -> String {
+    match (language, minutes) {
+        (Language::German, 0) => "gerade eben".to_owned(),
+        (Language::English, 0) => "just now".to_owned(),
+        (Language::German, minutes) => format!("vor {minutes} min"),
+        (Language::English, minutes) => format!("{minutes} min ago"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use tgow_core::settings::Language;
