@@ -1,0 +1,8 @@
+{
+  "version": "1.0.2",
+  "setup": "Ferrovox-Setup-1.0.2.exe",
+  "sha256": "0b18d74abfc73256283f52a99ea46165126f21dbb76754acf0cf37db5fe1d66d",
+  "size": 6675488,
+  "notes_de": "- Neu: Unter „Über Ferrovox“ führt ein Link zum GitHub-Profil von T-G0W",
+  "notes_en": "- New: \"About Ferrovox\" links to T-G0W's GitHub profile"
+}
