@@ -1,0 +1,19 @@
+[package]
+name = "tgow-launcher"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+tgow-core.workspace = true
+tgow-platform.workspace = true
+tgow-ui.workspace = true
+eframe = { workspace = true, features = ["clipboard", "links"] }
+egui.workspace = true
+
+[lints]
+workspace = true

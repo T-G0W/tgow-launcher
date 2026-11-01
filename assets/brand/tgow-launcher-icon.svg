@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16374B"/>
+      <stop offset="1" stop-color="#070F16"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8FD3FF"/>
+      <stop offset="0.55" stop-color="#4FB8FF"/>
+      <stop offset="1" stop-color="#0B4F80"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.62" cy="0.32" r="0.7">
+      <stop offset="0" stop-color="#4FB8FF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#4FB8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2F7FB"/>
+      <stop offset="1" stop-color="#B8DFFF"/>
+    </linearGradient>
+  </defs>
+  <path d="M159.9 24 H352.1 A135.9 135.9 0 0 1 488 159.9 V352.1 L352.1 488 H159.9 L24 352.1 V159.9 Z" fill="url(#body)"/>
+  <path d="M159.9 24 H352.1 A135.9 135.9 0 0 1 488 159.9 V352.1 L352.1 488 H159.9 L24 352.1 V159.9 Z" fill="url(#glow)"/>
+  <path d="M166.5 40 H352.1 A119.9 119.9 0 0 1 472 159.9 V345.5 L345.5 472 H166.5 L40 345.5 V166.5 Z" fill="none" stroke="url(#rim)" stroke-width="14" stroke-linejoin="miter"/>
+  <path d="M150 150 H332 A30 30 0 0 1 362 180 V210 H286 V372 H226 V210 H150 Z" fill="url(#mark)"/>
+</svg>

@@ -1,0 +1,260 @@
+use tgow_core::settings::Language;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Text {
+    Product,
+    Library,
+    Discover,
+    Downloads,
+    News,
+    Settings,
+    About,
+    Discord,
+    DiscordCommunity,
+    DiscordEditingHub,
+    DiscordServices,
+    Website,
+    GitHub,
+    Repository,
+    Minimize,
+    Maximize,
+    Restore,
+    Close,
+    ExpandSidebar,
+    CollapseSidebar,
+    Search,
+    FilterAll,
+    FilterInstalled,
+    FilterUpdates,
+    CatalogEmptyTitle,
+    CatalogEmptyBody,
+    CatalogLoading,
+    CatalogOffline,
+    CatalogUpdated,
+    CheckNow,
+    Signed,
+    NotSigned,
+    SignatureRejected,
+    NoRelease,
+    NotForSystem,
+    DetectedSystem,
+    Package,
+    Version,
+    Size,
+    ReleaseNotes,
+    Overview,
+    Install,
+    OpenOnGitHub,
+    Emulated,
+    DownloadsEmptyTitle,
+    DownloadsEmptyBody,
+    NewsEmptyTitle,
+    NewsEmptyBody,
+    DiscoverBody,
+    SettingsGeneral,
+    SettingsUpdates,
+    SettingsDownloads,
+    SettingsNotifications,
+    SettingsAccessibility,
+    Language,
+    LanguageSystem,
+    CloseToTray,
+    CloseToTrayHint,
+    LaunchAtLogin,
+    LaunchAtLoginHint,
+    LauncherUpdates,
+    AppUpdates,
+    UpdateAutomatic,
+    UpdateNotify,
+    UpdateOff,
+    CheckInterval,
+    Minutes,
+    ParallelDownloads,
+    SystemPackages,
+    SystemPackagesHint,
+    Notifications,
+    NotificationsHint,
+    Motion,
+    MotionSystem,
+    MotionReduced,
+    MotionFull,
+    UiSounds,
+    UiSoundsHint,
+    MadeBy,
+    Promise,
+    PrivacyNote,
+    License,
+    Fonts,
+    Build,
+    CopySystemInfo,
+    Copied,
+    LinksPending,
+}
+
+impl Text {
+    #[must_use]
+    pub fn get(self, language: Language) -> &'static str {
+        let (german, english) = self.pair();
+        match language {
+            Language::German => german,
+            Language::English => english,
+        }
+    }
+
+    #[expect(clippy::too_many_lines)]
+    fn pair(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Product => ("T-GOW Launcher", "T-GOW Launcher"),
+            Self::Library => ("Bibliothek", "Library"),
+            Self::Discover => ("Entdecken", "Discover"),
+            Self::Downloads => ("Downloads", "Downloads"),
+            Self::News => ("Neuigkeiten", "News"),
+            Self::Settings => ("Einstellungen", "Settings"),
+            Self::About => ("Über", "About"),
+            Self::Discord => ("Discord", "Discord"),
+            Self::DiscordCommunity => ("Discord · Community", "Discord · Community"),
+            Self::DiscordEditingHub => ("Discord · Editing Hub", "Discord · Editing Hub"),
+            Self::DiscordServices => ("Discord · Services", "Discord · Services"),
+            Self::Website => ("Website", "Website"),
+            Self::GitHub => ("GitHub", "GitHub"),
+            Self::Repository => ("Quellcode", "Source code"),
+            Self::Minimize => ("Minimieren", "Minimize"),
+            Self::Maximize => ("Maximieren", "Maximize"),
+            Self::Restore => ("Wiederherstellen", "Restore"),
+            Self::Close => ("Schließen", "Close"),
+            Self::ExpandSidebar => ("Leiste ausklappen", "Expand sidebar"),
+            Self::CollapseSidebar => ("Leiste einklappen", "Collapse sidebar"),
+            Self::Search => ("Suchen", "Search"),
+            Self::FilterAll => ("Alle", "All"),
+            Self::FilterInstalled => ("Installiert", "Installed"),
+            Self::CatalogEmptyTitle => ("Noch keine Apps", "No apps yet"),
+            Self::CatalogEmptyBody => (
+                "Apps erscheinen hier, sobald ein Projekt von T-GOW das Topic tgow-launcher und ein signiertes Release hat.",
+                "Apps show up here as soon as a T-GOW project has the tgow-launcher topic and a signed release.",
+            ),
+            Self::CatalogLoading => ("Katalog wird geladen", "Loading catalog"),
+            Self::CatalogOffline => (
+                "Offline · gespeicherter Katalog",
+                "Offline · cached catalog",
+            ),
+            Self::CatalogUpdated => ("Geprüft", "Checked"),
+            Self::CheckNow => ("Jetzt prüfen", "Check now"),
+            Self::Signed => ("Signatur geprüft", "Signature verified"),
+            Self::NotSigned => ("Kein signiertes Release", "No signed release"),
+            Self::SignatureRejected => ("Signatur ungültig", "Invalid signature"),
+            Self::NoRelease => ("Noch kein Release", "No release yet"),
+            Self::NotForSystem => ("Nicht für dein System", "Not for your system"),
+            Self::DetectedSystem => ("Erkanntes System", "Detected system"),
+            Self::Package => ("Paket", "Package"),
+            Self::Version => ("Version", "Version"),
+            Self::Size => ("Größe", "Size"),
+            Self::ReleaseNotes => ("Versionshinweise", "Release notes"),
+            Self::Overview => ("Übersicht", "Overview"),
+            Self::Install => ("Installieren", "Install"),
+            Self::OpenOnGitHub => ("Auf GitHub ansehen", "View on GitHub"),
+            Self::Emulated => ("per Emulation", "emulated"),
+            Self::DownloadsEmptyTitle => ("Keine Downloads", "No downloads"),
+            Self::DownloadsEmptyBody => (
+                "Laufende und fertige Downloads erscheinen hier.",
+                "Running and finished downloads show up here.",
+            ),
+            Self::NewsEmptyTitle => ("Noch keine Neuigkeiten", "No news yet"),
+            Self::NewsEmptyBody => (
+                "Neue Releases aller Apps erscheinen hier als Zeitleiste.",
+                "New releases of every app show up here as a timeline.",
+            ),
+            Self::DiscoverBody => (
+                "Alle Projekte von T-GOW, die über den Launcher verfügbar sind.",
+                "Every T-GOW project available through the launcher.",
+            ),
+            Self::SettingsGeneral => ("Allgemein", "General"),
+            Self::FilterUpdates | Self::SettingsUpdates => ("Updates", "Updates"),
+            Self::SettingsDownloads => ("Downloads & Speicher", "Downloads & storage"),
+            Self::SettingsNotifications => ("Benachrichtigungen", "Notifications"),
+            Self::SettingsAccessibility => ("Barrierefreiheit", "Accessibility"),
+            Self::Language => ("Sprache", "Language"),
+            Self::LanguageSystem => ("System", "System"),
+            Self::CloseToTray => ("Schließen in den Infobereich", "Close to tray"),
+            Self::CloseToTrayHint => (
+                "Der Launcher läuft weiter und hält Apps aktuell.",
+                "The launcher keeps running and keeps apps up to date.",
+            ),
+            Self::LaunchAtLogin => ("Mit dem System starten", "Start with the system"),
+            Self::LaunchAtLoginHint => (
+                "Startet minimiert im Infobereich.",
+                "Starts minimised in the tray.",
+            ),
+            Self::LauncherUpdates => ("Launcher-Updates", "Launcher updates"),
+            Self::AppUpdates => ("App-Updates (Standard)", "App updates (default)"),
+            Self::UpdateAutomatic => ("Automatisch", "Automatic"),
+            Self::UpdateNotify => ("Nur melden", "Notify only"),
+            Self::UpdateOff => ("Aus", "Off"),
+            Self::CheckInterval => ("Prüfintervall", "Check interval"),
+            Self::Minutes => ("min", "min"),
+            Self::ParallelDownloads => ("Parallele Downloads", "Parallel downloads"),
+            Self::SystemPackages => ("Systempakete bevorzugen", "Prefer system packages"),
+            Self::SystemPackagesHint => (
+                "Unter Linux deb, rpm oder pacman statt AppImage. Braucht ein Administratorpasswort.",
+                "On Linux use deb, rpm or pacman instead of AppImage. Needs an administrator password.",
+            ),
+            Self::Notifications => ("Desktop-Benachrichtigungen", "Desktop notifications"),
+            Self::NotificationsHint => (
+                "Bei installierten Updates, neuen Apps und Fehlern.",
+                "For installed updates, new apps and errors.",
+            ),
+            Self::Motion => ("Bewegung", "Motion"),
+            Self::MotionSystem => ("Wie System", "Follow system"),
+            Self::MotionReduced => ("Reduziert", "Reduced"),
+            Self::MotionFull => ("Voll", "Full"),
+            Self::UiSounds => ("Oberflächen-Klänge", "Interface sounds"),
+            Self::UiSoundsHint => (
+                "Kurze Klänge für Klicks und fertige Downloads.",
+                "Short sounds for clicks and finished downloads.",
+            ),
+            Self::MadeBy => ("Entwickelt von T-GOW", "Made by T-GOW"),
+            Self::Promise => (
+                "Keine Telemetrie. Kein Konto. Updates nur von GitHub, signiert und geprüft.",
+                "No telemetry. No account. Updates only from GitHub, signed and verified.",
+            ),
+            Self::PrivacyNote => (
+                "GitHub sieht bei jeder Prüfung deine IP-Adresse. Sonst verlässt nichts deinen Rechner.",
+                "GitHub sees your IP address on every check. Nothing else leaves your computer.",
+            ),
+            Self::License => ("Lizenz: MIT oder Apache-2.0", "License: MIT or Apache-2.0"),
+            Self::Fonts => (
+                "Schriften (SIL Open Font License)",
+                "Fonts (SIL Open Font License)",
+            ),
+            Self::Build => ("Build", "Build"),
+            Self::CopySystemInfo => ("Systeminfo kopieren", "Copy system info"),
+            Self::Copied => ("Kopiert", "Copied"),
+            Self::LinksPending => (
+                "Discord und Website folgen.",
+                "Discord and website coming soon.",
+            ),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tgow_core::settings::Language;
+
+    use super::Text;
+
+    #[test]
+    fn texts_avoid_exclamation_marks_and_trailing_spaces() {
+        for text in [
+            Text::CatalogEmptyBody,
+            Text::Promise,
+            Text::PrivacyNote,
+            Text::SystemPackagesHint,
+        ] {
+            for language in [Language::German, Language::English] {
+                let value = text.get(language);
+                assert!(!value.contains('!'), "{value}");
+                assert_eq!(value.trim(), value);
+            }
+        }
+    }
+}

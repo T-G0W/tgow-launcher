@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 512" width="1400" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1A25"/>
+      <stop offset="1" stop-color="#05090E"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16374B"/>
+      <stop offset="1" stop-color="#070F16"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8FD3FF"/>
+      <stop offset="0.55" stop-color="#4FB8FF"/>
+      <stop offset="1" stop-color="#0B4F80"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="512" fill="url(#bg)"/>
+  <g transform="translate(56 76) scale(0.703)">
+    <path d="M159.9 24 H352.1 A135.9 135.9 0 0 1 488 159.9 V352.1 L352.1 488 H159.9 L24 352.1 V159.9 Z" fill="url(#body)"/>
+    <path d="M166.5 40 H352.1 A119.9 119.9 0 0 1 472 159.9 V345.5 L345.5 472 H166.5 L40 345.5 V166.5 Z" fill="none" stroke="url(#rim)" stroke-width="14"/>
+    <path d="M150 150 H332 A30 30 0 0 1 362 180 V210 H286 V372 H226 V210 H150 Z" fill="#F2F7FB"/>
+  </g>
+  <text x="476" y="262" font-family="'Chakra Petch', 'Bai Jamjuree', 'Segoe UI', Arial, sans-serif" font-size="148" font-weight="700" letter-spacing="4" fill="#F2F7FB">T-GOW</text>
+  <text x="482" y="356" font-family="'Bai Jamjuree', 'Chakra Petch', 'Segoe UI', Arial, sans-serif" font-size="62" font-weight="600" letter-spacing="30" fill="#4FB8FF">LAUNCHER</text>
+</svg>
