@@ -3,6 +3,7 @@
 pub mod asset;
 pub mod catalog;
 pub mod checksum;
+pub mod install;
 pub mod links;
 pub mod manifest;
 pub mod platform;

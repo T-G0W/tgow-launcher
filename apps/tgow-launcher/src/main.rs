@@ -2,7 +2,9 @@
 #![forbid(unsafe_code)]
 
 mod backend;
+mod jobs;
 mod launcher;
+mod library;
 
 use std::sync::Arc;
 

@@ -4,8 +4,9 @@ use tgow_core::manifest::Manifest;
 use tgow_core::select::{self, Choice, Preference, Reason, Rejection};
 use tgow_core::settings::Settings;
 
-use super::{accent_of, initial, library::status, paint_chip};
-use crate::shell::{Effect, Page, Shell, View};
+use super::library::{phase_label, status};
+use super::{accent_of, initial};
+use crate::shell::{Effect, Page, Phase, Shell, View};
 use crate::text::Text;
 use crate::theme::{self, Font};
 use crate::widgets::{self, Emphasis};
@@ -67,7 +68,7 @@ pub(crate) fn show(
                     widgets::panel(ui, 16.0, |ui| {
                         ui.set_width(ui.available_width());
                         match shell.detail.tab {
-                            Tab::Overview => overview(ui, app, view, choice.as_ref()),
+                            Tab::Overview => overview(ui, app, view, choice.as_ref(), effects),
                             Tab::Notes => notes(ui, app, view),
                         }
                     });
@@ -146,6 +147,36 @@ fn action(
     choice: Option<&Result<Choice<'_>, Rejection>>,
     effects: &mut Vec<Effect>,
 ) {
+    if let Some(phase) = view.jobs.get(&app.id) {
+        widgets::progress_button(ui, &phase_label(view, *phase), phase.fraction());
+        if matches!(phase, Phase::Waiting | Phase::Downloading { .. })
+            && widgets::button(ui, view.t(Text::Cancel), Emphasis::Secondary, true).clicked()
+        {
+            effects.push(Effect::Cancel(app.id.clone()));
+        }
+        return;
+    }
+    let installable = matches!(choice, Some(Ok(_)));
+    if let Some(installation) = view.installed.get(&app.id) {
+        let outdated = app
+            .manifest()
+            .is_some_and(|manifest| installation.is_outdated(manifest));
+        if outdated && installable {
+            if widgets::button(ui, view.t(Text::Update), Emphasis::Primary, true).clicked() {
+                effects.push(Effect::Install(app.id.clone()));
+            }
+        } else if widgets::button(
+            ui,
+            view.t(Text::Launch),
+            Emphasis::Primary,
+            installation.launch.is_some(),
+        )
+        .clicked()
+        {
+            effects.push(Effect::Launch(app.id.clone()));
+        }
+        return;
+    }
     let (label, enabled) = match (&app.release, choice) {
         (ReleaseState::Verified(_), Some(Ok(_))) => (Text::Install, true),
         (ReleaseState::Verified(_), _) => (Text::NotForSystem, false),
@@ -160,8 +191,8 @@ fn action(
 }
 
 fn meta(ui: &mut Ui, app: &App, view: &View<'_>, choice: Option<&Result<Choice<'_>, Rejection>>) {
-    let (label, color) = status(app);
-    widgets::chip(ui, view.t(label), color);
+    let (label, color) = status(app, view);
+    widgets::chip(ui, &label, color);
     if let Some(manifest) = app.manifest() {
         widgets::chip(ui, &format!("v{}", manifest.version), theme::ACCENT_SOFT);
     }
@@ -182,6 +213,7 @@ fn overview(
     app: &App,
     view: &View<'_>,
     choice: Option<&Result<Choice<'_>, Rejection>>,
+    effects: &mut Vec<Effect>,
 ) {
     if let Some(description) = &app.description {
         widgets::paragraph(ui, description, theme::TEXT);
@@ -211,6 +243,27 @@ fn overview(
                 ui.end_row();
             }
         });
+    if let Some(installation) = view.installed.get(&app.id) {
+        ui.add_space(theme::M);
+        ui.horizontal(|ui| {
+            if widgets::button(ui, view.t(Text::ShowFolder), Emphasis::Secondary, true).clicked() {
+                effects.push(Effect::Reveal(app.id.clone()));
+            }
+            if installation.removal.is_some()
+                && widgets::button(ui, view.t(Text::Uninstall), Emphasis::Danger, true).clicked()
+            {
+                effects.push(Effect::Uninstall(app.id.clone()));
+            }
+        });
+    }
+    if let Some(message) = view.failures.get(&app.id) {
+        ui.add_space(theme::M);
+        widgets::paragraph(
+            ui,
+            &format!("{} · {message}", view.t(Text::Failed)),
+            theme::DANGER,
+        );
+    }
     if let Some(Err(Rejection::Unsupported { offered })) = choice {
         ui.add_space(theme::M);
         let offered: Vec<String> = offered
@@ -276,7 +329,6 @@ fn notes(ui: &mut Ui, app: &App, view: &View<'_>) {
             widgets::paragraph(ui, &clean, theme::TEXT_MUTED);
         }
     }
-    let _ = paint_chip;
 }
 
 fn megabytes(bytes: u64) -> String {

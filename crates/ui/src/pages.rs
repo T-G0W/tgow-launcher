@@ -1,5 +1,6 @@
 pub(crate) mod about;
 pub(crate) mod app;
+pub(crate) mod downloads;
 pub(crate) mod library;
 pub(crate) mod settings;
 

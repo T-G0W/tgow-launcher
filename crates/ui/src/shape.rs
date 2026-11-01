@@ -70,6 +70,12 @@ pub fn to_usize(value: f32) -> usize {
     value.max(0.0) as usize
 }
 
+#[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+#[must_use]
+pub fn ratio(part: u64, whole: u64) -> f32 {
+    (part.min(whole) as f64 / whole.max(1) as f64) as f32
+}
+
 #[expect(clippy::cast_possible_truncation)]
 #[must_use]
 pub fn seconds(time: f64) -> f32 {

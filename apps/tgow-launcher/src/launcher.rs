@@ -10,6 +10,7 @@ use tgow_ui::shell::{CatalogStatus, Effect, Shell, View};
 use tgow_ui::text;
 
 use crate::backend::{Backend, Command, Event};
+use crate::library::Library;
 
 pub(crate) struct Launcher {
     shell: Shell,
@@ -23,6 +24,7 @@ pub(crate) struct Launcher {
     checked_at: Option<Instant>,
     backend: Backend,
     interval: u32,
+    library: Library,
 }
 
 impl Launcher {
@@ -33,6 +35,12 @@ impl Launcher {
             ctx.clone(),
             paths.as_ref().map(|paths| paths.cache.join("catalog.json")),
             minutes(interval),
+        );
+        let library = Library::new(
+            ctx,
+            paths.as_ref().map(Paths::installed),
+            paths.as_ref().map(Paths::downloads),
+            paths.as_ref().map(|paths| paths.apps.clone()),
         );
         Self {
             shell: Shell::default(),
@@ -46,6 +54,7 @@ impl Launcher {
             checked_at: None,
             backend,
             interval,
+            library,
         }
     }
 
@@ -93,7 +102,17 @@ impl Launcher {
                     }
                 }
                 Effect::CheckNow => self.backend.send(Command::Refresh),
-                Effect::Install(_) => {}
+                Effect::Install(id) => {
+                    if let Some(app) = self.apps.iter().find(|app| app.id == id) {
+                        self.library.install(app, &self.platform, &self.settings);
+                    }
+                }
+                Effect::Launch(id) => {
+                    let _ = self.library.launch(&id, &self.settings);
+                }
+                Effect::Uninstall(id) => self.library.uninstall(&id),
+                Effect::Reveal(id) => self.library.reveal(&id),
+                Effect::Cancel(id) => self.library.cancel(&id),
             }
         }
     }
@@ -104,11 +123,17 @@ impl eframe::App for Launcher {
         let ctx = ui.ctx().clone();
         for event in self.backend.poll() {
             match event {
-                Event::Apps(apps) => self.apps = apps,
+                Event::Apps(apps) => {
+                    self.apps = apps;
+                    self.library.detect(&self.apps);
+                    self.library
+                        .update_outdated(&self.apps, &self.platform, &self.settings);
+                }
                 Event::Status(status) => self.status = status,
                 Event::Checked => self.checked_at = Some(Instant::now()),
             }
         }
+        self.library.poll();
         let reduced = self.settings.motion.is_reduced(self.system_reduced_motion);
         tgow_ui::widgets::set_reduced_motion(&ctx, reduced);
         let language = self.settings.language.resolve(self.locale.as_deref());
@@ -122,6 +147,9 @@ impl eframe::App for Launcher {
             status: self.status.clone(),
             checked: checked.as_deref(),
             version: env!("CARGO_PKG_VERSION"),
+            installed: &self.library.installed,
+            jobs: &self.library.phases,
+            failures: &self.library.failures,
         };
         let effects = self.shell.show(ui, &view, &mut self.settings);
         self.apply(&ctx, effects);

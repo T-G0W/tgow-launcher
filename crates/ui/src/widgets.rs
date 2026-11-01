@@ -449,3 +449,54 @@ pub fn setting(ui: &mut Ui, title: &str, hint: Option<&str>, control: impl FnOnc
         .hline(x, y, Stroke::new(1.0, theme::LINE.gamma_multiply(0.6)));
     ui.add_space(theme::S);
 }
+
+pub fn progress_bar(ui: &mut Ui, fraction: Option<f32>) -> Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 6.0), Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, 0.0, theme::SURFACE_0);
+    let fraction = fraction.unwrap_or_else(|| {
+        let time = crate::shape::seconds(ui.input(|input| input.time));
+        ui.ctx().request_repaint();
+        0.15 + 0.1 * (time * 3.0).sin()
+    });
+    let filled = Rect::from_min_size(
+        rect.min,
+        vec2(rect.width() * fraction.clamp(0.0, 1.0), rect.height()),
+    );
+    painter.add(Shape::convex_polygon(
+        shape::rounded_top_right(filled, 3.0),
+        theme::ACCENT,
+        Stroke::NONE,
+    ));
+    response
+}
+
+pub fn progress_button(ui: &mut Ui, label: &str, fraction: Option<f32>) -> Response {
+    let galley = galley(ui, label, Font::Button, 15.0, theme::TEXT);
+    let desired = vec2((galley.size().x + 60.0).max(220.0), 48.0);
+    let (rect, response) = ui.allocate_exact_size(desired, Sense::hover());
+    let painter = ui.painter();
+    shape::fill(
+        painter,
+        rect,
+        10.0,
+        theme::SURFACE_2,
+        Stroke::new(1.0, theme::ACCENT_DEEP),
+    );
+    let fraction = fraction.unwrap_or_else(|| {
+        ui.ctx().request_repaint();
+        let time = crate::shape::seconds(ui.input(|input| input.time));
+        0.5 + 0.5 * (time * 2.0).sin()
+    });
+    let clip = Rect::from_min_size(
+        rect.min,
+        vec2(rect.width() * fraction.clamp(0.0, 1.0), rect.height()),
+    );
+    painter.with_clip_rect(clip).add(Shape::convex_polygon(
+        shape::normform(rect, 10.0),
+        theme::ACCENT_DEEP,
+        Stroke::NONE,
+    ));
+    painter.galley(rect.center() - galley.size() / 2.0, galley, theme::TEXT);
+    response
+}

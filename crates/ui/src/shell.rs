@@ -1,7 +1,9 @@
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use egui::{Rect, Sense, Stroke, Ui, UiBuilder, Vec2, ViewportCommand, pos2, vec2};
 use tgow_core::catalog::App;
+use tgow_core::install::Installation;
 use tgow_core::links::Destination;
 use tgow_core::platform::Platform;
 use tgow_core::settings::{Language, Settings};
@@ -34,6 +36,28 @@ pub enum CatalogStatus {
     Limited { minutes: u64 },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Phase {
+    Waiting,
+    Downloading { done: u64, total: Option<u64> },
+    Verifying,
+    Installing,
+    Removing,
+}
+
+impl Phase {
+    #[must_use]
+    pub fn fraction(self) -> Option<f32> {
+        match self {
+            Self::Downloading {
+                done,
+                total: Some(total),
+            } if total > 0 => Some(shape::ratio(done, total)),
+            _ => None,
+        }
+    }
+}
+
 pub struct View<'a> {
     pub language: Language,
     pub platform: &'a Platform,
@@ -41,6 +65,9 @@ pub struct View<'a> {
     pub status: CatalogStatus,
     pub checked: Option<&'a str>,
     pub version: &'static str,
+    pub installed: &'a BTreeMap<String, Installation>,
+    pub jobs: &'a BTreeMap<String, Phase>,
+    pub failures: &'a BTreeMap<String, String>,
 }
 
 impl View<'_> {
@@ -62,6 +89,10 @@ pub enum Effect {
     SettingsChanged,
     CheckNow,
     Install(String),
+    Launch(String),
+    Uninstall(String),
+    Reveal(String),
+    Cancel(String),
 }
 
 #[derive(Default)]
@@ -258,15 +289,7 @@ impl Shell {
             Page::App(id) => pages::app::show(self, ui, view, &id, settings, effects),
             Page::Library => pages::library::show(self, ui, view, false, effects),
             Page::Discover => pages::library::show(self, ui, view, true, effects),
-            Page::Downloads => padded(ui, |ui| {
-                widgets::heading(ui, view.t(Text::Downloads), None);
-                widgets::empty_state(
-                    ui,
-                    Icon::Downloads,
-                    view.t(Text::DownloadsEmptyTitle),
-                    view.t(Text::DownloadsEmptyBody),
-                );
-            }),
+            Page::Downloads => pages::downloads::show(ui, view, effects),
             Page::News => padded(ui, |ui| {
                 widgets::heading(ui, view.t(Text::News), None);
                 widgets::empty_state(

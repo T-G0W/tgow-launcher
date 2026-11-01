@@ -3,7 +3,7 @@ use tgow_core::catalog::{App, ReleaseState};
 
 use super::{accent_of, initial, paint_chip};
 use crate::icons::Icon;
-use crate::shell::{CatalogStatus, Effect, Page, Shell, View, padded};
+use crate::shell::{CatalogStatus, Effect, Page, Phase, Shell, View, padded};
 use crate::text::Text;
 use crate::theme::{self, Font};
 use crate::widgets::{self, Emphasis, animate};
@@ -198,22 +198,54 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         painter.layout_job(job),
         theme::TEXT_MUTED,
     );
-    let (label, color) = status(app);
+    let (label, color) = status(app, view);
     paint_chip(
         painter,
         pos2(rect.left() + 20.0, rect.bottom() - 40.0),
-        view.t(label),
+        &label,
         color,
     );
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-pub(crate) fn status(app: &App) -> (Text, egui::Color32) {
-    match app.release {
-        ReleaseState::Verified(_) => (Text::Signed, theme::POSITIVE),
+pub(crate) fn status(app: &App, view: &View<'_>) -> (String, egui::Color32) {
+    if let Some(phase) = view.jobs.get(&app.id) {
+        return (phase_label(view, *phase), theme::ACCENT_SOFT);
+    }
+    if view.failures.contains_key(&app.id) {
+        return (view.t(Text::Failed).to_owned(), theme::DANGER);
+    }
+    if let Some(installation) = view.installed.get(&app.id) {
+        let outdated = app
+            .manifest()
+            .is_some_and(|manifest| installation.is_outdated(manifest));
+        return if outdated {
+            (view.t(Text::UpdateAvailable).to_owned(), theme::WARNING)
+        } else {
+            (view.t(Text::Installed).to_owned(), theme::POSITIVE)
+        };
+    }
+    let (text, color) = match app.release {
+        ReleaseState::Verified(_) => (Text::Signed, theme::ACCENT_SOFT),
         ReleaseState::Unknown => (Text::CatalogLoading, theme::TEXT_FAINT),
         ReleaseState::NoRelease => (Text::NoRelease, theme::TEXT_FAINT),
         ReleaseState::Unsigned => (Text::NotSigned, theme::WARNING),
         ReleaseState::Rejected(_) => (Text::SignatureRejected, theme::DANGER),
+    };
+    (view.t(text).to_owned(), color)
+}
+
+pub(crate) fn phase_label(view: &View<'_>, phase: Phase) -> String {
+    match phase {
+        Phase::Waiting => view.t(Text::PhaseWaiting).to_owned(),
+        Phase::Downloading { .. } => {
+            let percent = phase
+                .fraction()
+                .map_or(0.0, |fraction| (fraction * 100.0).floor());
+            format!("{} {percent} %", view.t(Text::PhaseDownloading))
+        }
+        Phase::Verifying => view.t(Text::PhaseVerifying).to_owned(),
+        Phase::Installing => view.t(Text::PhaseInstalling).to_owned(),
+        Phase::Removing => view.t(Text::PhaseRemoving).to_owned(),
     }
 }

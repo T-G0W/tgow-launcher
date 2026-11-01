@@ -1,12 +1,30 @@
 #![deny(unsafe_code)]
 
 pub mod detect;
+pub mod install;
 pub mod paths;
+pub mod process;
 pub mod storage;
+
+#[cfg(windows)]
+mod registry;
 
 #[cfg(windows)]
 #[expect(unsafe_code)]
 mod windows;
+
+#[must_use]
+pub fn detect_installation(app: &str, name: &str) -> Option<tgow_core::install::Installation> {
+    #[cfg(windows)]
+    {
+        registry::find(app, name)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (app, name);
+        None
+    }
+}
 
 #[must_use]
 pub fn system_locale() -> Option<String> {

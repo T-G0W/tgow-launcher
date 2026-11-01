@@ -13,6 +13,19 @@ impl Digest {
         Self(Sha256::digest(bytes).into())
     }
 
+    pub fn of_reader(mut reader: impl std::io::Read) -> std::io::Result<Self> {
+        let mut hasher = Sha256::new();
+        let mut buffer = vec![0; 64 * 1024];
+        loop {
+            let read = reader.read(&mut buffer)?;
+            if read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..read]);
+        }
+        Ok(Self(hasher.finalize().into()))
+    }
+
     #[must_use]
     pub fn from_bytes(bytes: [u8; 32]) -> Self {
         Self(bytes)
@@ -105,6 +118,15 @@ mod tests {
         assert_eq!(
             Digest::of(b"abc").to_string(),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn streams_the_same_hash_as_in_memory() {
+        let data = vec![7_u8; 200_000];
+        assert_eq!(
+            Digest::of_reader(data.as_slice()).unwrap(),
+            Digest::of(&data)
         );
     }
 
