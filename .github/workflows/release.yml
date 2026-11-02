@@ -1,0 +1,80 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            platform: windows-x64
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            platform: windows-arm64
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo-home
+      RUSTFLAGS: --remap-path-prefix=${{ github.workspace }}=/src
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+      - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release --locked --target ${{ matrix.target }} -p tgow-launcher
+      - run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "target/${{ matrix.target }}/release/tgow-launcher.exe" "dist/tgow-launcher-${version}-${{ matrix.platform }}-portable.exe"
+          else
+            mkdir -p "stage/tgow-launcher-${version}"
+            cp "target/${{ matrix.target }}/release/tgow-launcher" "stage/tgow-launcher-${version}/"
+            tar -C stage -czf "dist/tgow-launcher-${version}-${{ matrix.platform }}.tar.gz" "tgow-launcher-${version}"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ${{ matrix.platform }}
+          path: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          path: dist
+          merge-multiple: true
+      - run: |
+          version="${GITHUB_REF_NAME#v}"
+          cargo run --release --locked -p tgow-release -- manifest --app tgow-launcher --name "T-GOW Launcher" --version "$version" --launch "tgow-launcher-${version}/tgow-launcher" --out dist dist/*
+          cargo run --release --locked -p tgow-release -- sign dist/tgow-release.json
+        env:
+          TGOW_SIGNING_KEY: ${{ secrets.TGOW_SIGNING_KEY }}
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --title "T-GOW Launcher ${GITHUB_REF_NAME#v}" --notes-file CHANGELOG.md --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}

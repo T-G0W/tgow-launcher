@@ -1,0 +1,57 @@
+name: tgow-release
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+      artifacts:
+        required: true
+        type: string
+      installer:
+        required: false
+        type: string
+        default: ""
+      launch:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      TGOW_SIGNING_KEY:
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  manifest:
+    runs-on: ubuntu-24.04
+    environment: release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: ${{ inputs.artifacts }}
+          path: dist
+          merge-multiple: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: T-G0W/tgow-launcher
+          path: launcher
+          persist-credentials: false
+      - run: cargo build --release --locked --manifest-path launcher/Cargo.toml -p tgow-release
+      - run: |
+          version="${GITHUB_REF_NAME#v}"
+          extra=()
+          if [ -n "${{ inputs.installer }}" ]; then extra+=(--installer "${{ inputs.installer }}"); fi
+          if [ -n "${{ inputs.launch }}" ]; then extra+=(--launch "${{ inputs.launch }}"); fi
+          launcher/target/release/tgow-release manifest --app "${{ inputs.app }}" --name "${{ inputs.name }}" --version "$version" "${extra[@]}" --out dist dist/*
+          launcher/target/release/tgow-release sign dist/tgow-release.json
+        env:
+          TGOW_SIGNING_KEY: ${{ secrets.TGOW_SIGNING_KEY }}
+      - run: gh release upload "$GITHUB_REF_NAME" dist/tgow-release.json dist/tgow-release.json.sig dist/SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
