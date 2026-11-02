@@ -12,6 +12,29 @@ Written in Rust with egui. Windows 10 and 11, Linux.
 - Automatic updates for the launcher and all apps, with rollback
 - Every release manifest is checked against an Ed25519 signature before anything is installed
 
+## Adding a project
+
+A repository of T-G0W shows up in the launcher when it has the `tgow-launcher` topic and its latest release carries a signed `tgow-release.json`.
+
+Name every asset `<app>-<version>-<os>-<arch>[-setup|-portable].<ext>`, for example `ferrovox-1.1.0-windows-x64-setup.exe`, `ferrovox-1.1.0-windows-arm64-portable.zip` or `ferrovox-1.1.0-linux-x86_64.AppImage`. The launcher picks the asset for the native architecture first and falls back to emulation.
+
+Call the reusable workflow after the build jobs have uploaded their artifacts:
+
+```yaml
+release:
+  needs: build
+  uses: T-G0W/tgow-launcher/.github/workflows/tgow-release.yml@<commit>
+  with:
+    app: ferrovox
+    name: Ferrovox
+    artifacts: "*"
+    installer: inno
+  secrets:
+    TGOW_SIGNING_KEY: ${{ secrets.TGOW_SIGNING_KEY }}
+```
+
+It writes `tgow-release.json`, signs it and uploads it with `SHA256SUMS.txt` to the release. The same steps run locally with `cargo run -p tgow-release -- manifest ...` and `sign`.
+
 ## Privacy
 
 No telemetry, no account, no tracking. The launcher only talks to GitHub. GitHub sees your IP address when the launcher checks for updates.
