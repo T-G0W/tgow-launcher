@@ -50,17 +50,24 @@ fn main() -> eframe::Result {
         }
         return Ok(());
     }
-    if let (Some(paths), Ok(executable)) = (&paths, std::env::current_exe())
-        && update::Guard::new(&paths.data, &executable).on_start()
-    {
-        let _ = tgow_platform::process::launch(&executable, &arguments);
-        return Ok(());
-    }
     let messages = match instance::claim(&message) {
         Claim::Forwarded => return Ok(()),
         Claim::First(receiver) => Some(receiver),
         Claim::Unavailable => None,
     };
+    if let (Some(paths), Ok(executable)) = (&paths, std::env::current_exe())
+        && update::Guard::new(&paths.data, &executable)
+            .on_start(&executable, env!("CARGO_PKG_VERSION"))
+    {
+        drop(messages);
+        let mut relaunch: Vec<String> = arguments
+            .into_iter()
+            .filter(|argument| argument != update::AFTER_UPDATE_FLAG)
+            .collect();
+        relaunch.push(update::AFTER_UPDATE_FLAG.to_owned());
+        let _ = tgow_platform::process::launch(&executable, &relaunch);
+        return Ok(());
+    }
     let launch = Launch {
         hidden,
         messages: std::sync::Mutex::new(messages),

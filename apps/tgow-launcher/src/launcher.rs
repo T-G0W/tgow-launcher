@@ -375,6 +375,12 @@ impl eframe::App for Launcher {
         for message in messages {
             self.handle_message(ctx, &message);
         }
+        if !self.confirmed {
+            self.confirmed = true;
+            if let Some(guard) = &self.guard {
+                guard.confirm();
+            }
+        }
         #[cfg(windows)]
         self.poll_tray(ctx);
         self.poll_catalog(ctx);
@@ -421,12 +427,6 @@ impl eframe::App for Launcher {
         let effects = self.shell.show(ui, &view, &mut self.settings);
         self.apply(&ctx, effects);
         self.remember_window(&ctx);
-        if !self.confirmed {
-            self.confirmed = true;
-            if let Some(guard) = &self.guard {
-                guard.confirm();
-            }
-        }
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
