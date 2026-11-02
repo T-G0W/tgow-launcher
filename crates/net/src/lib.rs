@@ -105,6 +105,8 @@ impl Client {
             .user_agent(USER_AGENT)
             .timeout_connect(Some(Duration::from_secs(5)))
             .timeout_recv_response(Some(Duration::from_secs(15)))
+            .timeout_per_read(Some(Duration::from_secs(30)))
+            .timeout_per_write(Some(Duration::from_secs(30)))
             .tls_config(tls)
             .build()
             .into();

@@ -10,7 +10,7 @@ use tgow_core::asset::Asset;
 use tgow_core::catalog;
 use tgow_core::checksum::Digest;
 use tgow_core::install::Installation;
-use tgow_net::{Client, Flow};
+use tgow_net::{Client, Error as NetError, Flow};
 use tgow_platform::install::{self, Target};
 use tgow_ui::shell::Phase;
 
@@ -236,41 +236,13 @@ impl Worker {
         let folder = self.downloads.join(&order.app);
         fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
         let file = folder.join(&order.asset.file);
-        let partial = folder.join(format!("{}.part", order.asset.file));
-        let url = catalog::download_url(&order.repository, &order.tag, &order.asset.file);
-        self.send(Report::Phase(
-            order.app.clone(),
-            Phase::Downloading {
-                done: 0,
-                total: Some(order.asset.size),
-            },
-        ));
-        let mut last = Instant::now();
-        let result = self.client.download(&url, &partial, |done, total| {
-            if cancelled.load(Ordering::Relaxed) {
-                return Flow::Stop;
-            }
-            if last.elapsed() >= PROGRESS_STEP {
-                last = Instant::now();
-                self.send(Report::Phase(
-                    order.app.clone(),
-                    Phase::Downloading {
-                        done,
-                        total: total.or(Some(order.asset.size)),
-                    },
-                ));
-            }
-            if done > order.asset.size {
-                Flow::Stop
-            } else {
-                Flow::Continue
-            }
-        });
-        if let Err(error) = result {
-            if cancelled.load(Ordering::Relaxed) {
-                let _ = fs::remove_file(&partial);
-            }
-            return Err(error.to_string());
+        let partial = folder.join(partial_name(&order.asset));
+        let existing = partial.metadata().map_or(0, |metadata| metadata.len());
+        if existing > order.asset.size {
+            let _ = fs::remove_file(&partial);
+        }
+        if existing != order.asset.size {
+            self.download(order, &partial, cancelled)?;
         }
         self.send(Report::Phase(order.app.clone(), Phase::Verifying));
         let verified = File::open(&partial)
@@ -286,4 +258,66 @@ impl Worker {
         fs::rename(&partial, &file).map_err(|error| error.to_string())?;
         Ok(file)
     }
+
+    fn download(
+        &self,
+        order: &Order,
+        partial: &std::path::Path,
+        cancelled: &AtomicBool,
+    ) -> Result<(), String> {
+        let url = catalog::download_url(&order.repository, &order.tag, &order.asset.file);
+        self.send(Report::Phase(
+            order.app.clone(),
+            Phase::Downloading {
+                done: 0,
+                total: Some(order.asset.size),
+            },
+        ));
+        let mut last = Instant::now();
+        let mut oversized = false;
+        let result = self.client.download(&url, partial, |done, total| {
+            if cancelled.load(Ordering::Relaxed) {
+                return Flow::Stop;
+            }
+            if last.elapsed() >= PROGRESS_STEP {
+                last = Instant::now();
+                self.send(Report::Phase(
+                    order.app.clone(),
+                    Phase::Downloading {
+                        done,
+                        total: total.or(Some(order.asset.size)),
+                    },
+                ));
+            }
+            if done > order.asset.size {
+                oversized = true;
+                Flow::Stop
+            } else {
+                Flow::Continue
+            }
+        });
+        match result {
+            Ok(_) => Ok(()),
+            Err(error) => {
+                let unusable = matches!(error, NetError::Status(416));
+                if oversized || unusable || cancelled.load(Ordering::Relaxed) {
+                    let _ = fs::remove_file(partial);
+                }
+                if oversized {
+                    Err("download is larger than the signed size".to_owned())
+                } else {
+                    Err(error.to_string())
+                }
+            }
+        }
+    }
+}
+
+fn partial_name(asset: &Asset) -> String {
+    let digest = asset.sha256.to_string();
+    format!(
+        "{}.{}.part",
+        asset.file,
+        digest.get(..12).unwrap_or(&digest)
+    )
 }
