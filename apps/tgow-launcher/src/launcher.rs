@@ -124,6 +124,7 @@ impl Launcher {
         self.settings.language.resolve(self.locale.as_deref())
     }
 
+    #[cfg_attr(not(windows), expect(clippy::unused_self))]
     fn has_tray(&self) -> bool {
         #[cfg(windows)]
         {
