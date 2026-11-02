@@ -70,9 +70,9 @@ fn main() -> eframe::Result {
         .and_then(|paths| storage::read_text(&paths.settings()))
         .map(|text| Settings::from_json(&text))
         .unwrap_or_default();
-    let result = run(Renderer::Wgpu, paths.as_ref(), &settings, &launch);
+    let result = run(Renderer::Glow, paths.as_ref(), &settings, &launch);
     if result.is_err() {
-        run(Renderer::Glow, paths.as_ref(), &settings, &launch)
+        run(Renderer::Wgpu, paths.as_ref(), &settings, &launch)
     } else {
         result
     }
