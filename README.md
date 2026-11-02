@@ -248,7 +248,7 @@ Please use **[GitHub Issues](https://github.com/T-G0W/tgow-launcher/issues)** fo
 - **Ideas and changes:** new features, things that feel awkward, missing package formats or systems.
 - Take a quick look at the [open issues](https://github.com/T-G0W/tgow-launcher/issues) first. If someone already asked for the same thing, a thumbs-up reaction is enough and helps to prioritise.
 
-Issues are welcome in English or German.
+Issues are welcome in English or German. Security problems go through private reporting instead, see [SECURITY.md](SECURITY.md).
 
 <br>
 
