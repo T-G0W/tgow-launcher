@@ -4,7 +4,8 @@ use ed25519_compact::{PublicKey, Signature};
 
 use crate::checksum::decode_hex;
 
-pub const RELEASE_KEYS: [&str; 0] = [];
+pub const RELEASE_KEYS: [&str; 1] =
+    ["6624f776fb724ca026db69964e30bc15786d757ff3b243d77c8b343d07bfb08c"];
 pub const LEGACY_KEYS: [&str; 1] =
     ["ebed6bdcda2575c635ac22688814112731846d307adce100f1e585cc97be876f"];
 
@@ -81,7 +82,7 @@ mod tests {
 
     use ed25519_compact::{KeyPair, Seed};
 
-    use super::{Error, TrustedKeys};
+    use super::{Error, LEGACY_KEYS, RELEASE_KEYS, TrustedKeys};
 
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().fold(String::new(), |mut text, byte| {
@@ -126,9 +127,22 @@ mod tests {
             TrustedKeys::from_hex(&["00"]).err(),
             Some(Error::InvalidKey)
         );
+        let empty: [&str; 0] = [];
         assert_eq!(
-            TrustedKeys::release().verify(b"x", "00"),
+            TrustedKeys::from_hex(&empty).unwrap().verify(b"x", "00"),
             Err(Error::NoKeys)
+        );
+    }
+
+    #[test]
+    fn every_built_in_key_is_a_valid_public_key() {
+        assert_eq!(
+            TrustedKeys::from_hex(&RELEASE_KEYS).map(|keys| keys.keys.len()),
+            Ok(RELEASE_KEYS.len())
+        );
+        assert_eq!(
+            TrustedKeys::from_hex(&LEGACY_KEYS).map(|keys| keys.keys.len()),
+            Ok(LEGACY_KEYS.len())
         );
     }
 
