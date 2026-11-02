@@ -2,7 +2,7 @@ use egui::{Align2, Rect, Sense, Shape, Stroke, Ui, pos2, vec2};
 use tgow_core::catalog::{App, ReleaseState};
 use tgow_core::manifest::Manifest;
 use tgow_core::select::{self, Choice, Preference, Reason, Rejection};
-use tgow_core::settings::Settings;
+use tgow_core::settings::{Settings, UpdateMode};
 
 use super::library::{phase_label, status};
 use super::{accent_of, initial};
@@ -31,7 +31,7 @@ pub(crate) fn show(
     ui: &mut Ui,
     view: &View<'_>,
     id: &str,
-    settings: &Settings,
+    settings: &mut Settings,
     effects: &mut Vec<Effect>,
 ) {
     let Some(app) = view.app(id) else {
@@ -68,7 +68,10 @@ pub(crate) fn show(
                     widgets::panel(ui, 16.0, |ui| {
                         ui.set_width(ui.available_width());
                         match shell.detail.tab {
-                            Tab::Overview => overview(ui, app, view, choice.as_ref(), effects),
+                            Tab::Overview => {
+                                overview(ui, app, view, choice.as_ref(), effects);
+                                updates(ui, app, view, settings, effects);
+                            }
                             Tab::Notes => notes(ui, app, view),
                         }
                     });
@@ -334,4 +337,35 @@ fn notes(ui: &mut Ui, app: &App, view: &View<'_>) {
 fn megabytes(bytes: u64) -> String {
     let tenths = bytes.saturating_mul(10) / (1024 * 1024);
     format!("{},{} MB", tenths / 10, tenths % 10)
+}
+
+fn updates(
+    ui: &mut Ui,
+    app: &App,
+    view: &View<'_>,
+    settings: &mut Settings,
+    effects: &mut Vec<Effect>,
+) {
+    if !view.installed.contains_key(&app.id) {
+        return;
+    }
+    ui.add_space(theme::M);
+    let mut mode = settings.update_mode(&app.id);
+    let mut changed = false;
+    widgets::setting(ui, view.t(Text::SettingsUpdates), None, |ui| {
+        changed = widgets::segmented(
+            ui,
+            &mut mode,
+            &[
+                (UpdateMode::Automatic, view.t(Text::UpdateAutomatic)),
+                (UpdateMode::Notify, view.t(Text::UpdateNotify)),
+                (UpdateMode::Off, view.t(Text::UpdateOff)),
+            ],
+        )
+        .changed();
+    });
+    if changed {
+        settings.apps.entry(app.id.clone()).or_default().updates = Some(mode);
+        effects.push(Effect::SettingsChanged);
+    }
 }
