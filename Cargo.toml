@@ -19,6 +19,7 @@ tgow-platform = { path = "crates/platform" }
 tgow-ui = { path = "crates/ui" }
 eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "wgpu", "glow", "wayland", "x11"] }
 egui = { version = "0.37.0", default-features = false }
+egui_kittest = { version = "0.37.0", default-features = false }
 ed25519-compact = { version = "2.6.0", default-features = false }
 semver = { version = "1.0.28", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }

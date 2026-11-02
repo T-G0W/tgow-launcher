@@ -12,5 +12,8 @@ publish.workspace = true
 tgow-core.workspace = true
 egui.workspace = true
 
+[dev-dependencies]
+egui_kittest.workspace = true
+
 [lints]
 workspace = true
