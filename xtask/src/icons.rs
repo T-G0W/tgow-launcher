@@ -7,6 +7,8 @@ use crate::report::Finding;
 
 const SIZES: [u32; 7] = [16, 24, 32, 48, 64, 128, 256];
 pub(crate) const TARGET: &str = "assets/brand/tgow-launcher.ico";
+const MARKS: [&str; 3] = ["discord", "github", "website"];
+const MARK_SIZE: u32 = 96;
 const LOGOS: [(u32, &str); 2] = [
     (512, "assets/brand/logo-512.png"),
     (128, "assets/brand/logo-128.png"),
@@ -28,7 +30,46 @@ pub(crate) fn write(root: &Path) -> Result<Vec<Finding>, Error> {
         )
         .map_err(|error| Error::Io(io::Error::other(error)))?;
     }
+    for name in MARKS {
+        let source = root
+            .join("assets")
+            .join("icons")
+            .join(format!("{name}.svg"));
+        let text =
+            fs::read_to_string(&source).map_err(|error| Error::Read(source.clone(), error))?;
+        let rgba = mark(&text).map_err(|error| Error::Io(io::Error::other(error)))?;
+        image::save_buffer(
+            root.join("assets")
+                .join("icons")
+                .join(format!("{name}.png")),
+            &rgba,
+            MARK_SIZE,
+            MARK_SIZE,
+            image::ExtendedColorType::Rgba8,
+        )
+        .map_err(|error| Error::Io(io::Error::other(error)))?;
+    }
     Ok(Vec::new())
+}
+
+fn mark(svg: &str) -> Result<Vec<u8>, String> {
+    use resvg::{tiny_skia, usvg};
+    let tree =
+        usvg::Tree::from_str(svg, &usvg::Options::default()).map_err(|error| error.to_string())?;
+    let mut pixmap = tiny_skia::Pixmap::new(MARK_SIZE, MARK_SIZE).ok_or("empty canvas")?;
+    let scale = f32::from(u16::try_from(MARK_SIZE).unwrap_or(u16::MAX)) / tree.size().width();
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+    Ok(pixmap
+        .data()
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|pixel| [255, 255, 255, pixel[3]])
+        .collect())
 }
 
 fn encode(images: &[(u32, Vec<u8>)]) -> Vec<u8> {

@@ -7,6 +7,7 @@ use egui::{
 };
 
 use crate::icons::{self, Icon};
+use crate::logos::{self, Logo};
 use crate::shape;
 use crate::theme::{self, Font};
 
@@ -160,6 +161,73 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
 
 const MENU_WIDTH: f32 = 232.0;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Glyph {
+    Icon(Icon),
+    Logo(Logo),
+}
+
+impl From<Icon> for Glyph {
+    fn from(icon: Icon) -> Self {
+        Self::Icon(icon)
+    }
+}
+
+impl From<Logo> for Glyph {
+    fn from(logo: Logo) -> Self {
+        Self::Logo(logo)
+    }
+}
+
+impl Glyph {
+    fn paint(self, painter: &egui::Painter, rect: Rect, color: Color32) {
+        match self {
+            Self::Icon(icon) => icons::paint(painter, rect, icon, color),
+            Self::Logo(logo) => {
+                logos::paint(painter, rect.shrink(rect.width() * 0.06), logo, color);
+            }
+        }
+    }
+}
+
+pub fn link_button(ui: &mut Ui, logo: Logo, label: &str) -> Response {
+    let galley = galley(ui, &label.to_uppercase(), Font::Button, 13.0, theme::TEXT);
+    let desired = vec2(galley.size().x + 60.0, 40.0);
+    let (rect, response) = ui.allocate_exact_size(desired, Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Link, true, label));
+    if !ui.is_rect_visible(rect) {
+        return response;
+    }
+    let hover = animate(
+        ui.ctx(),
+        response.id.with("hover"),
+        response.hovered(),
+        theme::FAST,
+    );
+    let brand = logo.color();
+    let painter = ui.painter();
+    shape::fill(
+        painter,
+        rect,
+        theme::RADIUS_S,
+        theme::SURFACE_1.lerp_to_gamma(theme::SURFACE_2, hover),
+        Stroke::new(1.0, theme::LINE_STRONG.lerp_to_gamma(brand, hover)),
+    );
+    logos::paint(
+        painter,
+        Rect::from_center_size(pos2(rect.left() + 24.0, rect.center().y), Vec2::splat(20.0)),
+        logo,
+        theme::TEXT_MUTED.lerp_to_gamma(brand, hover.max(0.35)),
+    );
+    painter.galley(
+        pos2(rect.left() + 44.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        theme::TEXT,
+    );
+    focus_ring(ui, &response, rect, theme::RADIUS_S);
+    response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
 pub fn menu_item(ui: &mut Ui, icon: Icon, label: &str, danger: bool) -> Response {
     let (rect, response) = ui.allocate_exact_size(vec2(MENU_WIDTH, 34.0), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(Role::MenuItem, true, label));
@@ -307,7 +375,8 @@ pub fn square_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Respo
         .on_hover_cursor(CursorIcon::PointingHand)
 }
 
-pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Response {
+pub fn icon_button(ui: &mut Ui, icon: impl Into<Glyph>, tooltip: &str, side: f32) -> Response {
+    let glyph = icon.into();
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(side), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(Role::Button, true, tooltip));
     focus_ring(ui, &response, rect, theme::RADIUS_S);
@@ -326,8 +395,12 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Respons
             Stroke::NONE,
         );
     }
-    let color = theme::TEXT_MUTED.lerp_to_gamma(theme::ACCENT_SOFT, hover);
-    icons::paint(ui.painter(), rect.shrink(side * 0.25), icon, color);
+    let target = match glyph {
+        Glyph::Logo(logo) if logo != Logo::GitHub => logo.color(),
+        _ => theme::ACCENT_SOFT,
+    };
+    let color = theme::TEXT_MUTED.lerp_to_gamma(target, hover);
+    glyph.paint(ui.painter(), rect.shrink(side * 0.25), color);
     response
         .on_hover_text(tooltip)
         .on_hover_cursor(CursorIcon::PointingHand)
@@ -361,7 +434,14 @@ pub fn window_button(ui: &mut Ui, icon: Icon, tooltip: &str, danger: bool) -> Re
     response.on_hover_text(tooltip)
 }
 
-pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion: f32) -> Response {
+pub fn nav_item(
+    ui: &mut Ui,
+    icon: impl Into<Glyph>,
+    label: &str,
+    selected: bool,
+    expansion: f32,
+) -> Response {
+    let glyph = icon.into();
     let width = ui.available_width();
     let (rect, response) = ui.allocate_exact_size(vec2(width, 48.0), Sense::click());
     response.widget_info(|| WidgetInfo::selected(Role::Tab, true, selected, label));
@@ -397,7 +477,7 @@ pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion:
     let color = theme::TEXT_MUTED
         .lerp_to_gamma(theme::TEXT, hover)
         .lerp_to_gamma(theme::ACCENT_SOFT, active);
-    icons::paint(painter, icon_rect, icon, color);
+    glyph.paint(painter, icon_rect, color);
     focus_ring(ui, &response, tile, theme::RADIUS);
     if expansion > 0.05 {
         let galley = painter.layout_job(job(

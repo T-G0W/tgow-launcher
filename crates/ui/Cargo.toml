@@ -11,6 +11,7 @@ publish.workspace = true
 [dependencies]
 tgow-core.workspace = true
 egui.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [dev-dependencies]
 egui_kittest.workspace = true

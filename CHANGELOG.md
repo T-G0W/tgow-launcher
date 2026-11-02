@@ -24,3 +24,4 @@ First public release.
 - Back navigation from the title bar, Alt+Left and the mouse
 - Slightly rounded controls, no maximizing, animations on by default
 - Logo and screenshot of an app from its repository when the release brings none
+- Discord, website and GitHub as real logos in the sidebar, the title bar and on the about page

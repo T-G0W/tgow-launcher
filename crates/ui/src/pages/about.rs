@@ -2,6 +2,7 @@ use egui::{Align2, Rect, Sense, Ui, Vec2, pos2, vec2};
 use tgow_core::links::{self, Destination};
 
 use crate::brand;
+use crate::logos::Logo;
 use crate::shell::{Effect, Shell, View, padded};
 use crate::text::Text;
 use crate::theme::{self, FONT_LICENSES, Font};
@@ -44,18 +45,26 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mu
                     let _ =
                         widgets::button(ui, view.t(Text::DiscordSoon), Emphasis::Secondary, false);
                 }
-                for (destination, label) in [
-                    (Destination::DiscordCommunity, Text::DiscordCommunity),
-                    (Destination::DiscordEditingHub, Text::DiscordEditingHub),
-                    (Destination::DiscordServices, Text::DiscordServices),
-                    (Destination::Website, Text::Website),
-                    (Destination::GitHub, Text::GitHub),
-                    (Destination::Repository, Text::Repository),
+                for (destination, logo, label) in [
+                    (Destination::DiscordCommunity, Logo::Discord, Text::Discord),
+                    (
+                        Destination::DiscordEditingHub,
+                        Logo::Discord,
+                        Text::DiscordEditingHub,
+                    ),
+                    (
+                        Destination::DiscordServices,
+                        Logo::Discord,
+                        Text::DiscordServices,
+                    ),
+                    (Destination::Website, Logo::Website, Text::Website),
+                    (Destination::GitHub, Logo::GitHub, Text::GitHub),
+                    (Destination::Repository, Logo::GitHub, Text::Repository),
                 ] {
                     let Some(url) = destination.url() else {
                         continue;
                     };
-                    if widgets::button(ui, view.t(label), Emphasis::Secondary, true).clicked() {
+                    if widgets::link_button(ui, logo, view.t(label)).clicked() {
                         effects.push(Effect::Open(url.to_owned()));
                     }
                 }

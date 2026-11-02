@@ -2,6 +2,7 @@
 
 pub mod brand;
 pub mod icons;
+pub mod logos;
 mod pages;
 mod popover;
 pub mod shape;

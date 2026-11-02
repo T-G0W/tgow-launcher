@@ -9,6 +9,7 @@ use tgow_core::platform::Platform;
 use tgow_core::settings::{Language, Settings};
 
 use crate::icons::Icon;
+use crate::logos::Logo;
 use crate::pages;
 use crate::popover::{self, Popover};
 use crate::starfield::Starfield;
@@ -422,7 +423,8 @@ impl Shell {
                 }
                 ui.add_space(theme::S);
                 if let Some(url) = Destination::main_discord()
-                    && widgets::icon_button(ui, Icon::Chat, view.t(Text::Discord), 34.0).clicked()
+                    && widgets::icon_button(ui, Logo::Discord, view.t(Text::Discord), 34.0)
+                        .clicked()
                 {
                     effects.push(Effect::Open(url.to_owned()));
                 }
@@ -491,9 +493,9 @@ impl Shell {
             );
             ui.add_space(theme::S);
             for (destination, icon, label) in [
-                (Destination::GitHub, Icon::Code, Text::GitHub),
-                (Destination::Website, Icon::Globe, Text::Website),
-                (Destination::DiscordCommunity, Icon::Chat, Text::Discord),
+                (Destination::DiscordCommunity, Logo::Discord, Text::Discord),
+                (Destination::Website, Logo::Website, Text::Website),
+                (Destination::GitHub, Logo::GitHub, Text::GitHub),
             ] {
                 let Some(url) = destination.url() else {
                     continue;
