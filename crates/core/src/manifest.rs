@@ -201,6 +201,9 @@ impl Manifest {
     fn legacy(value: serde_json::Value, identity: Identity<'_>) -> Result<Self, Error> {
         let raw: Legacy =
             serde_json::from_value(value).map_err(|error| Error::Json(error.to_string()))?;
+        if !compact(&raw.setup).starts_with(&compact(identity.app)) {
+            return Err(Error::Invalid("setup"));
+        }
         Ok(Self {
             schema: 0,
             app: identity.app.to_owned(),
@@ -325,6 +328,13 @@ fn is_relative_path(path: &str) -> bool {
             .all(|part| !part.is_empty() && part != ".." && part != "." && is_file_name(part))
 }
 
+fn compact(text: &str) -> String {
+    text.chars()
+        .filter(char::is_ascii_alphanumeric)
+        .map(|character| character.to_ascii_lowercase())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Error, Identity, Manifest, is_file_name, parse_version};
@@ -383,6 +393,14 @@ mod tests {
         assert_eq!(asset.kind, Kind::Inno);
         assert_eq!(asset.size, 6_675_488);
         assert!(manifest.notes.get(Language::English).is_some());
+        let elsewhere = Manifest::parse(
+            bytes,
+            Identity {
+                app: "neocross",
+                name: "NeoCross",
+            },
+        );
+        assert!(matches!(elsewhere, Err(Error::Invalid("setup"))));
     }
 
     #[test]
