@@ -18,6 +18,8 @@
   <a href="https://github.com/T-G0W/tgow-launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/T-G0W/tgow-launcher?style=flat-square&color=4fb8ff"></a>
   <a href="https://github.com/T-G0W/tgow-launcher/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/T-G0W/tgow-launcher/total?style=flat-square&color=4cc36b"></a>
   <a href="https://github.com/T-G0W/tgow-launcher/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/T-G0W/tgow-launcher?style=flat-square&color=8b5cf6"></a>
+  <a href="https://t-gow.com"><img alt="Website: t-gow.com" src="https://img.shields.io/badge/website-t--gow.com-4fb8ff?style=flat-square"></a>
+  <img alt="Discord: coming soon" src="https://img.shields.io/badge/Discord-coming%20soon-5865f2?style=flat-square&logo=discord&logoColor=white">
 </p>
 
 <p align="center">
@@ -263,4 +265,4 @@ at your option.
 
 The fonts Chakra Petch, Bai Jamjuree and JetBrains Mono are used under the SIL Open Font License 1.1. The licenses of all bundled crates are collected in [`THIRD-PARTY-LICENSES.txt`](THIRD-PARTY-LICENSES.txt), generated with `cargo xtask licenses`.
 
-<p align="center"><sub>Made by T-GOW</sub></p>
+<p align="center"><sub>Made by T-GOW · <a href="https://t-gow.com">t-gow.com</a></sub></p>
