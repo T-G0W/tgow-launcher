@@ -1,7 +1,7 @@
-use std::f32::consts::FRAC_PI_2;
+use std::f32::consts::{FRAC_PI_2, PI};
 
 use egui::epaint::{Mesh, Shadow};
-use egui::{Color32, CornerRadius, Painter, Pos2, Rect, Shape, Stroke, pos2, vec2};
+use egui::{Color32, CornerRadius, Painter, Pos2, Rect, Stroke, StrokeKind, pos2, vec2};
 
 const ARC_STEPS: u16 = 10;
 
@@ -28,6 +28,51 @@ pub fn normform(rect: Rect, cut: f32) -> Vec<Pos2> {
         pos2(left, top + cut),
     ]);
     points
+}
+
+#[must_use]
+pub fn rounded(rect: Rect, radius: f32) -> Vec<Pos2> {
+    let radius = radius.min(rect.width() / 2.0).min(rect.height() / 2.0);
+    if radius < 0.5 {
+        return vec![
+            rect.left_top(),
+            rect.right_top(),
+            rect.right_bottom(),
+            rect.left_bottom(),
+        ];
+    }
+    let corners = [
+        (pos2(rect.left() + radius, rect.top() + radius), PI),
+        (
+            pos2(rect.right() - radius, rect.top() + radius),
+            PI + FRAC_PI_2,
+        ),
+        (pos2(rect.right() - radius, rect.bottom() - radius), 0.0),
+        (
+            pos2(rect.left() + radius, rect.bottom() - radius),
+            FRAC_PI_2,
+        ),
+    ];
+    let steps = arc_steps(radius);
+    corners
+        .into_iter()
+        .flat_map(|(center, start)| {
+            (0..=steps).map(move |step| {
+                let angle = start + FRAC_PI_2 * f32::from(step) / f32::from(steps);
+                center + radius * vec2(angle.cos(), angle.sin())
+            })
+        })
+        .collect()
+}
+
+fn arc_steps(radius: f32) -> u16 {
+    if radius < 3.0 {
+        2
+    } else if radius < 8.0 {
+        4
+    } else {
+        ARC_STEPS
+    }
 }
 
 #[must_use]
@@ -72,8 +117,14 @@ pub fn inset_cut(cut: f32, inset: f32) -> f32 {
     (cut - inset * (2.0 - std::f32::consts::SQRT_2)).max(0.0)
 }
 
-pub fn fill(painter: &Painter, rect: Rect, cut: f32, fill: Color32, stroke: Stroke) {
-    painter.add(Shape::convex_polygon(normform(rect, cut), fill, stroke));
+pub fn fill(painter: &Painter, rect: Rect, radius: f32, fill: Color32, stroke: Stroke) {
+    painter.rect(
+        rect,
+        CornerRadius::same(to_u8(radius)),
+        fill,
+        stroke,
+        StrokeKind::Inside,
+    );
 }
 
 #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -100,8 +151,8 @@ pub fn seconds(time: f64) -> f32 {
     (time % 86_400.0) as f32
 }
 
-pub fn glow(painter: &Painter, rect: Rect, cut: f32, color: Color32, blur: u8) {
-    let radius = to_u8(cut);
+pub fn glow(painter: &Painter, rect: Rect, radius: f32, color: Color32, blur: u8) {
+    let radius = to_u8(radius);
     let shadow = Shadow {
         offset: [0, 0],
         blur,

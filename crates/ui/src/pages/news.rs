@@ -47,12 +47,12 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>) {
                         egui::pos2(rail.center().x, rail.top() + 22.0),
                         vec2(12.0, 12.0),
                     ),
-                    3.0,
+                    6.0,
                     accent,
                     Stroke::NONE,
                 );
                 ui.vertical(|ui| {
-                    widgets::panel(ui, 12.0, |ui| {
+                    widgets::panel(ui, theme::RADIUS, |ui| {
                         ui.set_width(ui.available_width());
                         ui.horizontal(|ui| {
                             widgets::text(ui, &manifest.name, Font::Heading, 19.0, theme::TEXT);

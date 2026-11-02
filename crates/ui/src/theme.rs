@@ -29,6 +29,10 @@ pub const L: f32 = 24.0;
 pub const XL: f32 = 32.0;
 pub const XXL: f32 = 48.0;
 
+pub const RADIUS_S: f32 = 4.0;
+pub const RADIUS: f32 = 8.0;
+pub const RADIUS_L: f32 = 12.0;
+
 pub const TITLE_BAR: f32 = 44.0;
 pub const SIDEBAR_COLLAPSED: f32 = 72.0;
 pub const SIDEBAR_EXPANDED: f32 = 220.0;
@@ -142,6 +146,9 @@ pub fn install(ctx: &Context) {
         style.spacing.button_padding = egui::vec2(M, S);
         style.spacing.scroll.floating = true;
         style.spacing.scroll.bar_width = 6.0;
+        style.spacing.menu_margin = egui::Margin::same(6);
+        style.spacing.menu_width = 220.0;
+        style.spacing.interact_size.y = 30.0;
         style.interaction.selectable_labels = false;
         style
             .text_styles
@@ -184,10 +191,25 @@ fn visuals() -> Visuals {
         widget.weak_bg_fill = fill;
         widget.bg_stroke = Stroke::new(1.0, LINE);
         widget.fg_stroke = Stroke::new(1.0, TEXT);
-        widget.corner_radius = egui::CornerRadius::same(2);
+        widget.corner_radius = egui::CornerRadius::same(4);
     }
     visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, LINE_STRONG);
     visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
+    visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+    visuals.widgets.inactive.bg_stroke = Stroke::NONE;
+    visuals.widgets.hovered.weak_bg_fill = SURFACE_2;
+    visuals.window_corner_radius = egui::CornerRadius::same(8);
+    visuals.menu_corner_radius = egui::CornerRadius::same(8);
+    visuals.window_fill = Color32::from_rgba_unmultiplied_const(0x0C, 0x1F, 0x2C, 248);
+    visuals.window_stroke = Stroke::new(1.0, LINE_STRONG);
+    let shadow = egui::epaint::Shadow {
+        offset: [0, 6],
+        blur: 24,
+        spread: 0,
+        color: Color32::from_black_alpha(150),
+    };
+    visuals.window_shadow = shadow;
+    visuals.popup_shadow = shadow;
     visuals
 }
 

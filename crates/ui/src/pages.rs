@@ -18,7 +18,7 @@ pub(crate) fn paint_chip(painter: &Painter, at: Pos2, label: &str, color: Color3
     shape::fill(
         painter,
         rect,
-        4.0,
+        theme::RADIUS_S,
         color.gamma_multiply(0.12),
         Stroke::new(1.0, color.gamma_multiply(0.6)),
     );

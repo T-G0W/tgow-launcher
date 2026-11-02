@@ -106,9 +106,9 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
         theme::FAST,
     );
     let cut = if emphasis == Emphasis::Primary {
-        10.0
+        theme::RADIUS
     } else {
-        6.0
+        theme::RADIUS_S
     };
     let painter = ui.painter();
     let (fill, stroke, text_color) = match (emphasis, enabled) {
@@ -161,7 +161,7 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
 pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(side), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(Role::Button, true, tooltip));
-    focus_ring(ui, &response, rect, 4.0);
+    focus_ring(ui, &response, rect, theme::RADIUS_S);
     let hover = animate(
         ui.ctx(),
         response.id.with("hover"),
@@ -172,7 +172,7 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Respons
         shape::fill(
             ui.painter(),
             rect,
-            4.0,
+            theme::RADIUS_S,
             theme::SURFACE_2.gamma_multiply(hover),
             Stroke::NONE,
         );
@@ -234,14 +234,14 @@ pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion:
         let fill = theme::SURFACE_2
             .gamma_multiply(hover.max(active * 0.8))
             .lerp_to_gamma(theme::ACCENT_DEEP.gamma_multiply(0.55), active * 0.5);
-        shape::fill(painter, tile, 6.0, fill, Stroke::NONE);
+        shape::fill(painter, tile, theme::RADIUS, fill, Stroke::NONE);
     }
     if active > 0.0 {
         let bar = Rect::from_min_size(
             pos2(rect.left(), tile.top() + 8.0),
             vec2(3.0, tile.height() - 16.0),
         );
-        painter.rect_filled(bar, 0.0, theme::ACCENT.gamma_multiply(active));
+        painter.rect_filled(bar, 2.0, theme::ACCENT.gamma_multiply(active));
     }
     let icon_rect =
         Rect::from_center_size(pos2(rect.left() + 36.0, rect.center().y), Vec2::splat(22.0));
@@ -249,7 +249,7 @@ pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion:
         .lerp_to_gamma(theme::TEXT, hover)
         .lerp_to_gamma(theme::ACCENT_SOFT, active);
     icons::paint(painter, icon_rect, icon, color);
-    focus_ring(ui, &response, tile, 6.0);
+    focus_ring(ui, &response, tile, theme::RADIUS);
     if expansion > 0.05 {
         let galley = painter.layout_job(job(
             label,
@@ -279,23 +279,23 @@ pub fn toggle(ui: &mut Ui, value: &mut bool, label: &str) -> Response {
     }
     let state = *value;
     response.widget_info(|| WidgetInfo::selected(Role::Switch, true, state, label));
-    focus_ring(ui, &response, rect, 6.0);
+    focus_ring(ui, &response, rect, rect.height() / 2.0);
     let on = animate(ui.ctx(), response.id.with("on"), *value, theme::NORMAL);
     let painter = ui.painter();
     let track = theme::SURFACE_3.lerp_to_gamma(theme::ACCENT_DEEP, on);
     shape::fill(
         painter,
         rect,
-        6.0,
+        rect.height() / 2.0,
         track,
         Stroke::new(1.0, theme::LINE_STRONG.lerp_to_gamma(theme::ACCENT, on)),
     );
     let knob_x = egui::lerp((rect.left() + 13.0)..=(rect.right() - 13.0), on);
-    let knob = Rect::from_center_size(pos2(knob_x, rect.center().y), vec2(18.0, 16.0));
+    let knob = Rect::from_center_size(pos2(knob_x, rect.center().y), Vec2::splat(16.0));
     shape::fill(
         painter,
         knob,
-        4.0,
+        8.0,
         theme::TEXT_MUTED.lerp_to_gamma(theme::ACCENT_SOFT, on),
         Stroke::NONE,
     );
@@ -321,7 +321,7 @@ pub fn segmented<T: Copy + PartialEq>(
     shape::fill(
         painter,
         rect,
-        6.0,
+        theme::RADIUS,
         theme::SURFACE_0,
         Stroke::new(1.0, theme::LINE),
     );
@@ -385,7 +385,7 @@ pub fn chip(ui: &mut Ui, label: &str, color: Color32) -> Response {
     shape::fill(
         ui.painter(),
         rect,
-        4.0,
+        theme::RADIUS_S,
         color.gamma_multiply(0.12),
         Stroke::new(1.0, color.gamma_multiply(0.6)),
     );
@@ -401,7 +401,7 @@ pub fn empty_state(ui: &mut Ui, icon: Icon, title: &str, body: &str) {
         shape::fill(
             ui.painter(),
             rect,
-            14.0,
+            theme::RADIUS_L,
             theme::SURFACE_1,
             Stroke::new(1.0, theme::LINE),
         );
@@ -425,10 +425,12 @@ pub fn panel<R>(ui: &mut Ui, cut: f32, add_contents: impl FnOnce(&mut Ui) -> R) 
     let rect = inner.response.rect;
     ui.painter().set(
         background,
-        Shape::convex_polygon(
-            shape::normform(rect, cut),
+        egui::epaint::RectShape::new(
+            rect,
+            egui::CornerRadius::same(shape::to_u8(cut)),
             theme::GLASS,
             Stroke::new(1.0, theme::LINE),
+            egui::StrokeKind::Inside,
         ),
     );
     inner.inner
@@ -466,7 +468,7 @@ pub fn setting(ui: &mut Ui, title: &str, hint: Option<&str>, control: impl FnOnc
 pub fn progress_bar(ui: &mut Ui, fraction: Option<f32>) -> Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 6.0), Sense::hover());
     let painter = ui.painter();
-    painter.rect_filled(rect, 0.0, theme::SURFACE_0);
+    painter.rect_filled(rect, 3.0, theme::SURFACE_0);
     let fraction = fraction.unwrap_or_else(|| {
         let time = crate::shape::seconds(ui.input(|input| input.time));
         ui.ctx().request_repaint();
@@ -476,11 +478,7 @@ pub fn progress_bar(ui: &mut Ui, fraction: Option<f32>) -> Response {
         rect.min,
         vec2(rect.width() * fraction.clamp(0.0, 1.0), rect.height()),
     );
-    painter.add(Shape::convex_polygon(
-        shape::rounded_top_right(filled, 3.0),
-        theme::ACCENT,
-        Stroke::NONE,
-    ));
+    painter.rect_filled(filled, 3.0, theme::ACCENT);
     response
 }
 
@@ -492,7 +490,7 @@ pub fn progress_button(ui: &mut Ui, label: &str, fraction: Option<f32>) -> Respo
     shape::fill(
         painter,
         rect,
-        10.0,
+        theme::RADIUS,
         theme::SURFACE_2,
         Stroke::new(1.0, theme::ACCENT_DEEP),
     );
@@ -505,20 +503,24 @@ pub fn progress_button(ui: &mut Ui, label: &str, fraction: Option<f32>) -> Respo
         rect.min,
         vec2(rect.width() * fraction.clamp(0.0, 1.0), rect.height()),
     );
-    painter.with_clip_rect(clip).add(Shape::convex_polygon(
-        shape::normform(rect, 10.0),
+    shape::fill(
+        &painter.with_clip_rect(clip),
+        rect,
+        theme::RADIUS,
         theme::ACCENT_DEEP,
         Stroke::NONE,
-    ));
+    );
     painter.galley(rect.center() - galley.size() / 2.0, galley, theme::TEXT);
     response
 }
 
 pub(crate) fn focus_ring(ui: &Ui, response: &Response, rect: Rect, cut: f32) {
     if response.has_focus() {
-        ui.painter().add(Shape::closed_line(
-            shape::normform(rect.expand(3.0), cut + 1.0),
+        ui.painter().rect_stroke(
+            rect.expand(3.0),
+            egui::CornerRadius::same(shape::to_u8(cut + 3.0)),
             Stroke::new(2.0, theme::ACCENT_SOFT),
-        ));
+            egui::StrokeKind::Outside,
+        );
     }
 }

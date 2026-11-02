@@ -331,7 +331,7 @@ fn notes(ui: &mut Ui, app: &App, view: &View<'_>) {
                 shape::fill(
                     ui.painter(),
                     dot.shrink2(vec2(3.0, 7.0)),
-                    1.5,
+                    3.0,
                     theme::ACCENT,
                     Stroke::NONE,
                 );
