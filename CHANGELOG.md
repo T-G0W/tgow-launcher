@@ -10,7 +10,7 @@
 - Update mode per app: automatic, notify only or off
 - Several downloads at once, installers still run one after another
 - Hero images and icons from the release manifest
-- Library filter for installed apps and updates, sorting by name or newest release
+- Library as grid or list, with a filter for installed apps and updates and sorting by name or newest release
 - Keyboard shortcuts, accessible names and focus rings for every control
 - OpenGL renderer first, wgpu as fallback
 - List of all bundled open-source crates with their licenses
