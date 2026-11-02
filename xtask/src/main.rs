@@ -29,6 +29,7 @@ Commands:
   names                Reject catch-all type and module names
   aifiles              Reject ai tool files in the repository
   commits [range]      Check commit messages, identity and time zone
+  commit-msg <file>    Check a commit message and the git identity before committing
   audit-binary <file>  Reject home directory paths and email addresses in a build
   dist                 Build the release binary without local paths and audit it
   licenses [--check]   Write or verify the third-party license files
@@ -38,6 +39,7 @@ Commands:
 ";
 
 const HOOK: &str = "#!/bin/sh\nexec cargo xtask precommit\n";
+const MESSAGE_HOOK: &str = "#!/bin/sh\nexec cargo xtask commit-msg \"$1\"\n";
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -72,6 +74,7 @@ fn dispatch(repo: &Repo, args: &[String]) -> Result<Vec<Finding>, Error> {
         "names" => Ok(names::check(&repo.files()?)),
         "aifiles" => Ok(aifiles::check(&repo.paths()?)),
         "commits" => commit_check(repo, rest.first().map_or("HEAD", String::as_str)),
+        "commit-msg" => draft_check(repo, rest.first()),
         "precommit" => precommit(repo),
         "install-hooks" => install_hooks(repo),
         "icons" => icons::write(&repo.root),
@@ -94,6 +97,15 @@ fn commit_check(repo: &Repo, range: &str) -> Result<Vec<Finding>, Error> {
     }
     let log = repo.run("git", &["log", commits::LOG_FORMAT, "--date=raw", range])?;
     Ok(commits::check(&commits::parse(&log)))
+}
+
+fn draft_check(repo: &Repo, file: Option<&String>) -> Result<Vec<Finding>, Error> {
+    let file = file.ok_or_else(|| Error::Usage(USAGE.to_owned()))?;
+    let message =
+        fs::read_to_string(file).map_err(|error| Error::Read(Path::new(file).into(), error))?;
+    let author = repo.run("git", &["var", "GIT_AUTHOR_IDENT"])?;
+    let committer = repo.run("git", &["var", "GIT_COMMITTER_IDENT"])?;
+    Ok(commits::check_draft(&message, &author, &committer))
 }
 
 fn precommit(repo: &Repo) -> Result<Vec<Finding>, Error> {
@@ -119,5 +131,6 @@ fn install_hooks(repo: &Repo) -> Result<Vec<Finding>, Error> {
     let hooks = repo.root.join(hooks.trim());
     fs::create_dir_all(&hooks)?;
     fs::write(hooks.join("pre-commit"), HOOK)?;
+    fs::write(hooks.join("commit-msg"), MESSAGE_HOOK)?;
     Ok(Vec::new())
 }

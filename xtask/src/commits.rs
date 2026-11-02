@@ -43,6 +43,37 @@ pub(crate) fn parse(log: &str) -> Vec<Commit<'_>> {
         .collect()
 }
 
+pub(crate) fn check_draft(message: &str, author: &str, committer: &str) -> Vec<Finding> {
+    let message = message
+        .lines()
+        .filter(|line| !line.starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let (Some(author), Some(committer)) = (identity(author), identity(committer)) else {
+        return vec![Finding::whole(
+            "commit message",
+            "git identity could not be read",
+        )];
+    };
+    let draft = Commit {
+        hash: "commit message",
+        author: author.0,
+        author_email: author.1,
+        author_date: author.2,
+        committer: committer.0,
+        committer_email: committer.1,
+        committer_date: committer.2,
+        message: &message,
+    };
+    check(&[draft])
+}
+
+fn identity(ident: &str) -> Option<(&str, &str, &str)> {
+    let (name, rest) = ident.trim().split_once(" <")?;
+    let (email, date) = rest.split_once("> ")?;
+    Some((name, email, date))
+}
+
 pub(crate) fn check(commits: &[Commit<'_>]) -> Vec<Finding> {
     commits
         .iter()
@@ -128,6 +159,36 @@ fn is_emoji(c: char) -> bool {
         u32::from(c),
         0x1F000..=0x1FAFF | 0x2600..=0x27BF | 0x2B00..=0x2BFF | 0xFE0F | 0x200D
     )
+}
+
+#[cfg(test)]
+mod draft_tests {
+    use super::check_draft;
+
+    const IDENT: &str = "T-G0W <210194347+T-G0W@users.noreply.github.com> 1730000000 +0000";
+
+    #[test]
+    fn accepts_a_clean_draft_and_ignores_comment_lines() {
+        let message = "Add the reader\n\n# Please enter the commit message\n";
+        assert_eq!(check_draft(message, IDENT, IDENT), Vec::new());
+    }
+
+    #[test]
+    fn rejects_long_subjects_and_local_time_before_committing() {
+        let long = format!("{}\n", "a".repeat(80));
+        let local = "T-G0W <210194347+T-G0W@users.noreply.github.com> 1730000000 +0100";
+        let findings: Vec<String> = check_draft(&long, local, IDENT)
+            .into_iter()
+            .map(|finding| finding.to_string())
+            .collect();
+        assert!(findings.iter().any(|text| text.contains("80 characters")));
+        assert!(
+            findings
+                .iter()
+                .any(|text| text.contains("author date is not in utc"))
+        );
+        assert_eq!(check_draft("Add the reader\n", "nobody", IDENT).len(), 1);
+    }
 }
 
 #[cfg(test)]
