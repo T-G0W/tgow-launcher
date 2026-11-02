@@ -19,7 +19,7 @@
   <a href="https://github.com/T-G0W/tgow-launcher/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/T-G0W/tgow-launcher/total?style=flat-square&color=4cc36b"></a>
   <a href="https://github.com/T-G0W/tgow-launcher/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/T-G0W/tgow-launcher?style=flat-square&color=8b5cf6"></a>
   <a href="https://t-gow.com"><img alt="Website: t-gow.com" src="https://img.shields.io/badge/website-t--gow.com-4fb8ff?style=flat-square"></a>
-  <img alt="Discord: coming soon" src="https://img.shields.io/badge/Discord-coming%20soon-5865f2?style=flat-square&logo=discord&logoColor=white">
+  <a href="https://discord.gg/HpxtynMCFy"><img alt="Discord" src="https://img.shields.io/badge/Discord-join-5865f2?style=flat-square&logo=discord&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -148,11 +148,11 @@ Every screenshot is the real app, captured from a build of this repository.
       The news page lines up the latest release of every app with its notes, in German or English, depending on your language.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/tgow-launcher-about.png" alt="The About page with the logo, version, a disabled Discord coming soon button, Website, GitHub and Source code buttons, the privacy promise, the license and the lists of fonts and open-source components" width="100%">
+      <img src="docs/images/tgow-launcher-about.png" alt="The About page with the logo, version, Discord, Website, GitHub and Source code buttons with their logos, the privacy promise, the license and the lists of fonts and open-source components" width="100%">
       <br>
       <sub>About: version, links, privacy promise and every bundled open-source component.</sub>
       <h3>Nothing hidden</h3>
-      The About page links the website and GitHub, lists all crates the launcher is built from with their licenses, and copies your system info for bug reports in one click.
+      The About page links Discord, the website and GitHub, lists all crates the launcher is built from with their licenses, and copies your system info for bug reports in one click.
     </td>
   </tr>
 </table>
@@ -273,7 +273,7 @@ Please use **[GitHub Issues](https://github.com/T-G0W/tgow-launcher/issues)** fo
 - **Ideas and changes:** new features, things that feel awkward, missing package formats or systems.
 - Take a quick look at the [open issues](https://github.com/T-G0W/tgow-launcher/issues) first. If someone already asked for the same thing, a thumbs-up reaction is enough and helps to prioritise.
 
-Issues are welcome in English or German. Security problems go through private reporting instead, see [SECURITY.md](SECURITY.md).
+Questions and chat are welcome on [Discord](https://discord.gg/HpxtynMCFy). Issues are welcome in English or German. Security problems go through private reporting instead, see [SECURITY.md](SECURITY.md).
 
 <br>
 
@@ -288,4 +288,4 @@ The open-source components inside keep their own licenses.
 
 The fonts Chakra Petch, Bai Jamjuree and JetBrains Mono are used under the SIL Open Font License 1.1. The licenses of all bundled crates are collected in [`THIRD-PARTY-LICENSES.txt`](THIRD-PARTY-LICENSES.txt), generated with `cargo xtask licenses`.
 
-<p align="center"><sub>Made by T-GOW · <a href="https://t-gow.com">t-gow.com</a></sub></p>
+<p align="center"><sub>Made by T-GOW · <a href="https://t-gow.com">t-gow.com</a> · <a href="https://discord.gg/HpxtynMCFy">Discord</a></sub></p>
