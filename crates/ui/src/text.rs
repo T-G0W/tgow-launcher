@@ -105,6 +105,8 @@ pub enum Text {
     FilterAll,
     SortName,
     SortNewest,
+    ArrangeGrid,
+    ArrangeList,
     RunWithoutInstall,
 }
 
@@ -266,6 +268,8 @@ impl Text {
             Self::FilterAll => ("Alle", "All"),
             Self::SortName => ("Name", "Name"),
             Self::SortNewest => ("Neueste", "Newest"),
+            Self::ArrangeGrid => ("Raster", "Grid"),
+            Self::ArrangeList => ("Liste", "List"),
             Self::LinksPending => (
                 "Discord und Website folgen.",
                 "Discord and website coming soon.",

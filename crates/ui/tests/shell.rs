@@ -144,3 +144,16 @@ fn check_now_button_and_shortcuts_raise_effects() {
     harness.run();
     assert_eq!(harness.state().shell.page, Page::Downloads);
 }
+
+#[test]
+fn list_arrangement_keeps_apps_reachable() {
+    let mut harness = harness(&["ferrovox", "neocross"]);
+    harness
+        .get_by_role_and_label(Role::RadioButton, "Liste")
+        .click();
+    harness.run();
+    let title = harness.state().apps[1].title().to_owned();
+    harness.get_by_label_contains(&format!("{title}, ")).click();
+    harness.run();
+    assert_eq!(harness.state().shell.page, Page::App("neocross".to_owned()));
+}

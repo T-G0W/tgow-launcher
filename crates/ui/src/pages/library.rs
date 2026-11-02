@@ -12,6 +12,8 @@ use crate::{icons, shape};
 const CARD_MIN_WIDTH: f32 = 300.0;
 const CARD_HEIGHT: f32 = 214.0;
 const GAP: f32 = 20.0;
+const ROW_HEIGHT: f32 = 68.0;
+const ROW_GAP: f32 = 10.0;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Filter {
@@ -28,11 +30,19 @@ pub(crate) enum Order {
     Newest,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Arrangement {
+    #[default]
+    Grid,
+    List,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct State {
     pub(crate) search: String,
     pub(crate) filter: Filter,
     pub(crate) order: Order,
+    pub(crate) arrangement: Arrangement,
     pub(crate) focus_search: bool,
 }
 
@@ -67,29 +77,7 @@ pub(crate) fn show(
             });
         });
         ui.add_space(theme::M);
-        ui.horizontal(|ui| {
-            if !discover {
-                widgets::segmented(
-                    ui,
-                    &mut shell.library.filter,
-                    &[
-                        (Filter::All, view.t(Text::FilterAll)),
-                        (Filter::Installed, view.t(Text::Installed)),
-                        (Filter::Updates, view.t(Text::SettingsUpdates)),
-                    ],
-                );
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::segmented(
-                    ui,
-                    &mut shell.library.order,
-                    &[
-                        (Order::Newest, view.t(Text::SortNewest)),
-                        (Order::Name, view.t(Text::SortName)),
-                    ],
-                );
-            });
-        });
+        controls(ui, &mut shell.library, view, discover);
         ui.add_space(theme::M);
         let filter = if discover {
             Filter::All
@@ -120,24 +108,159 @@ pub(crate) fn show(
             widgets::empty_state(ui, Icon::Library, view.t(title), view.t(body));
             return;
         }
-        let available = ui.available_width();
-        let columns = ((available + GAP) / (CARD_MIN_WIDTH + GAP))
-            .floor()
-            .max(1.0);
-        let width = (available - GAP * (columns - 1.0)) / columns;
-        let per_row = shape::to_usize(columns);
-        for row in apps.chunks(per_row) {
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = GAP;
-                for app in row {
-                    if card(ui, app, view, width).clicked() {
-                        shell.page = Page::App(app.id.clone());
-                    }
-                }
-            });
-            ui.add_space(GAP - ui.spacing().item_spacing.y);
+        let opened = match shell.library.arrangement {
+            Arrangement::Grid => grid(ui, &apps, view),
+            Arrangement::List => list(ui, &apps, view),
+        };
+        if let Some(app) = opened {
+            shell.page = Page::App(app.id.clone());
         }
     });
+}
+
+fn controls(ui: &mut Ui, state: &mut State, view: &View<'_>, discover: bool) {
+    ui.horizontal(|ui| {
+        if !discover {
+            widgets::segmented(
+                ui,
+                &mut state.filter,
+                &[
+                    (Filter::All, view.t(Text::FilterAll)),
+                    (Filter::Installed, view.t(Text::Installed)),
+                    (Filter::Updates, view.t(Text::SettingsUpdates)),
+                ],
+            );
+        }
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            widgets::segmented(
+                ui,
+                &mut state.arrangement,
+                &[
+                    (Arrangement::List, view.t(Text::ArrangeList)),
+                    (Arrangement::Grid, view.t(Text::ArrangeGrid)),
+                ],
+            );
+            ui.add_space(theme::S);
+            widgets::segmented(
+                ui,
+                &mut state.order,
+                &[
+                    (Order::Newest, view.t(Text::SortNewest)),
+                    (Order::Name, view.t(Text::SortName)),
+                ],
+            );
+        });
+    });
+}
+
+fn grid<'a>(ui: &mut Ui, apps: &[&'a App], view: &View<'_>) -> Option<&'a App> {
+    let available = ui.available_width();
+    let columns = ((available + GAP) / (CARD_MIN_WIDTH + GAP))
+        .floor()
+        .max(1.0);
+    let width = (available - GAP * (columns - 1.0)) / columns;
+    let per_row = shape::to_usize(columns);
+    let mut opened = None;
+    for row in apps.chunks(per_row) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = GAP;
+            for app in row {
+                if card(ui, app, view, width).clicked() {
+                    opened = Some(*app);
+                }
+            }
+        });
+        ui.add_space(GAP - ui.spacing().item_spacing.y);
+    }
+    opened
+}
+
+fn list<'a>(ui: &mut Ui, apps: &[&'a App], view: &View<'_>) -> Option<&'a App> {
+    let mut opened = None;
+    for app in apps {
+        if row(ui, app, view).clicked() {
+            opened = Some(*app);
+        }
+        ui.add_space(ROW_GAP - ui.spacing().item_spacing.y);
+    }
+    opened
+}
+
+fn row(ui: &mut Ui, app: &App, view: &View<'_>) -> Response {
+    let (rect, response) =
+        ui.allocate_exact_size(vec2(ui.available_width(), ROW_HEIGHT), Sense::click());
+    let (label, color) = status(app, view);
+    response.widget_info(|| {
+        WidgetInfo::labeled(Role::Button, true, format!("{}, {label}", app.title()))
+    });
+    if !ui.is_rect_visible(rect) {
+        return response;
+    }
+    let hover = animate(
+        ui.ctx(),
+        response.id.with("hover"),
+        response.hovered(),
+        theme::FAST,
+    );
+    let accent = accent_of(app);
+    let painter = ui.painter();
+    if hover > 0.0 {
+        shape::glow(painter, rect, 8.0, accent.gamma_multiply(0.14 * hover), 20);
+    }
+    shape::fill(
+        painter,
+        rect,
+        8.0,
+        theme::GLASS,
+        Stroke::new(1.0, theme::LINE.lerp_to_gamma(accent, hover * 0.8)),
+    );
+    let tile = Rect::from_center_size(pos2(rect.left() + 36.0, rect.center().y), Vec2::splat(44.0));
+    paint_icon(painter, app, view.artwork.get(&app.id), tile, accent);
+    let left = tile.right() + 16.0;
+    let name = painter.layout_job(widgets::job(app.title(), Font::Heading, 17.0, theme::TEXT));
+    let name_width = name.size().x;
+    painter.galley(pos2(left, rect.top() + 13.0), name, theme::TEXT);
+    let version = app.manifest().map_or_else(
+        || app.tag.clone().unwrap_or_default(),
+        |manifest| format!("v{}", manifest.version),
+    );
+    painter.text(
+        pos2(left + name_width + 12.0, rect.top() + 17.0),
+        Align2::LEFT_TOP,
+        version,
+        Font::Mono.id(12.0),
+        theme::TEXT_FAINT,
+    );
+    let chip = painter
+        .layout_job(widgets::job(&label, Font::Label, 10.0, color))
+        .size()
+        .x
+        + 18.0;
+    let chip_left = rect.right() - 18.0 - chip;
+    paint_chip(
+        painter,
+        pos2(chip_left, rect.center().y - 10.0),
+        &label,
+        color,
+    );
+    let mut job = widgets::job(description(app, view), Font::Body, 13.0, theme::TEXT_MUTED);
+    job.wrap.max_width = (chip_left - left - 24.0).max(40.0);
+    job.wrap.max_rows = 1;
+    job.wrap.overflow_character = Some('\u{2026}');
+    painter.galley(
+        pos2(left, rect.top() + 39.0),
+        painter.layout_job(job),
+        theme::TEXT_MUTED,
+    );
+    widgets::focus_ring(ui, &response, rect, 8.0);
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+fn description<'a>(app: &'a App, view: &View<'_>) -> &'a str {
+    app.manifest()
+        .and_then(|manifest| manifest.tagline.get(view.language))
+        .or(app.description.as_deref())
+        .unwrap_or_default()
 }
 
 fn sort(apps: &mut [&App], order: Order) {
@@ -269,12 +392,7 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         Font::Mono.id(12.0),
         theme::TEXT_FAINT,
     );
-    let description = app
-        .manifest()
-        .and_then(|manifest| manifest.tagline.get(view.language))
-        .or(app.description.as_deref())
-        .unwrap_or_default();
-    let mut job = widgets::job(description, Font::Body, 13.5, theme::TEXT_MUTED);
+    let mut job = widgets::job(description(app, view), Font::Body, 13.5, theme::TEXT_MUTED);
     job.wrap.max_width = rect.width() - 40.0;
     job.wrap.max_rows = 2;
     job.wrap.overflow_character = Some('…');
