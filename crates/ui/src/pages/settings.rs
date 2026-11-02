@@ -97,7 +97,8 @@ fn general(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
         view.t(Text::CloseToTray),
         Some(view.t(Text::CloseToTrayHint)),
         |ui| {
-            changed |= widgets::toggle(ui, &mut settings.close_to_tray).changed();
+            changed |= widgets::toggle(ui, &mut settings.close_to_tray, view.t(Text::CloseToTray))
+                .changed();
         },
     );
     widgets::setting(
@@ -105,7 +106,12 @@ fn general(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
         view.t(Text::LaunchAtLogin),
         Some(view.t(Text::LaunchAtLoginHint)),
         |ui| {
-            changed |= widgets::toggle(ui, &mut settings.launch_at_login).changed();
+            changed |= widgets::toggle(
+                ui,
+                &mut settings.launch_at_login,
+                view.t(Text::LaunchAtLogin),
+            )
+            .changed();
         },
     );
     changed
@@ -158,7 +164,12 @@ fn downloads(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
         view.t(Text::SystemPackages),
         Some(view.t(Text::SystemPackagesHint)),
         |ui| {
-            changed |= widgets::toggle(ui, &mut settings.system_packages).changed();
+            changed |= widgets::toggle(
+                ui,
+                &mut settings.system_packages,
+                view.t(Text::SystemPackages),
+            )
+            .changed();
         },
     );
     changed
@@ -171,7 +182,9 @@ fn notifications(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool 
         view.t(Text::Notifications),
         Some(view.t(Text::NotificationsHint)),
         |ui| {
-            changed |= widgets::toggle(ui, &mut settings.notifications).changed();
+            changed |=
+                widgets::toggle(ui, &mut settings.notifications, view.t(Text::Notifications))
+                    .changed();
         },
     );
     changed
@@ -196,7 +209,8 @@ fn accessibility(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool 
         view.t(Text::UiSounds),
         Some(view.t(Text::UiSoundsHint)),
         |ui| {
-            changed |= widgets::toggle(ui, &mut settings.ui_sounds).changed();
+            changed |=
+                widgets::toggle(ui, &mut settings.ui_sounds, view.t(Text::UiSounds)).changed();
         },
     );
     changed

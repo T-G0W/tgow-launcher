@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use egui::text::{LayoutJob, TextFormat};
 use egui::{
-    Align2, Color32, Context, CursorIcon, Galley, Id, Rect, Response, Sense, Shape, Stroke, Ui,
-    Vec2, pos2, vec2,
+    Align2, Color32, Context, CursorIcon, Galley, Id, Rect, Response, Role, Sense, Shape, Stroke,
+    Ui, Vec2, WidgetInfo, pos2, vec2,
 };
 
 use crate::icons::{self, Icon};
@@ -95,6 +95,7 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
         Sense::hover()
     };
     let (rect, response) = ui.allocate_exact_size(desired, sense);
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, enabled, label));
     if !ui.is_rect_visible(rect) {
         return response;
     }
@@ -143,6 +144,7 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
         ),
     };
     shape::fill(painter, rect, cut, fill, stroke);
+    focus_ring(ui, &response, rect, cut);
     painter.galley(
         rect.center() - galley.size() / 2.0,
         ui.painter()
@@ -158,6 +160,8 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
 
 pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(side), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, tooltip));
+    focus_ring(ui, &response, rect, 4.0);
     let hover = animate(
         ui.ctx(),
         response.id.with("hover"),
@@ -182,6 +186,7 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Respons
 
 pub fn window_button(ui: &mut Ui, icon: Icon, tooltip: &str, danger: bool) -> Response {
     let (rect, response) = ui.allocate_exact_size(vec2(46.0, theme::TITLE_BAR), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, tooltip));
     let hover = animate(
         ui.ctx(),
         response.id.with("hover"),
@@ -210,6 +215,7 @@ pub fn window_button(ui: &mut Ui, icon: Icon, tooltip: &str, danger: bool) -> Re
 pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion: f32) -> Response {
     let width = ui.available_width();
     let (rect, response) = ui.allocate_exact_size(vec2(width, 48.0), Sense::click());
+    response.widget_info(|| WidgetInfo::selected(Role::Tab, true, selected, label));
     let hover = animate(
         ui.ctx(),
         response.id.with("hover"),
@@ -243,6 +249,7 @@ pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion:
         .lerp_to_gamma(theme::TEXT, hover)
         .lerp_to_gamma(theme::ACCENT_SOFT, active);
     icons::paint(painter, icon_rect, icon, color);
+    focus_ring(ui, &response, tile, 6.0);
     if expansion > 0.05 {
         let galley = painter.layout_job(job(
             label,
@@ -264,12 +271,15 @@ pub fn nav_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool, expansion:
     }
 }
 
-pub fn toggle(ui: &mut Ui, value: &mut bool) -> Response {
+pub fn toggle(ui: &mut Ui, value: &mut bool, label: &str) -> Response {
     let (rect, mut response) = ui.allocate_exact_size(vec2(46.0, 24.0), Sense::click());
     if response.clicked() {
         *value = !*value;
         response.mark_changed();
     }
+    let state = *value;
+    response.widget_info(|| WidgetInfo::selected(Role::Switch, true, state, label));
+    focus_ring(ui, &response, rect, 6.0);
     let on = animate(ui.ctx(), response.id.with("on"), *value, theme::NORMAL);
     let painter = ui.painter();
     let track = theme::SURFACE_3.lerp_to_gamma(theme::ACCENT_DEEP, on);
@@ -319,9 +329,12 @@ pub fn segmented<T: Copy + PartialEq>(
     for (index, ((option, label), width)) in options.iter().zip(&widths).enumerate() {
         let cell = Rect::from_min_size(pos2(left, rect.top()), vec2(*width, rect.height()));
         left += width;
+        let selected_now = *option == *value;
         let cell_response = ui
             .interact(cell, response.id.with(index), Sense::click())
             .on_hover_cursor(CursorIcon::PointingHand);
+        cell_response
+            .widget_info(|| WidgetInfo::selected(Role::RadioButton, true, selected_now, *label));
         if cell_response.clicked() && *option != *value {
             *value = *option;
             response.mark_changed();
@@ -499,4 +512,13 @@ pub fn progress_button(ui: &mut Ui, label: &str, fraction: Option<f32>) -> Respo
     ));
     painter.galley(rect.center() - galley.size() / 2.0, galley, theme::TEXT);
     response
+}
+
+fn focus_ring(ui: &Ui, response: &Response, rect: Rect, cut: f32) {
+    if response.has_focus() {
+        ui.painter().add(Shape::closed_line(
+            shape::normform(rect.expand(3.0), cut + 1.0),
+            Stroke::new(2.0, theme::ACCENT_SOFT),
+        ));
+    }
 }
