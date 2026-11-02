@@ -2,6 +2,7 @@
 
 pub mod detect;
 pub mod install;
+pub mod integration;
 pub mod paths;
 pub mod process;
 pub mod storage;

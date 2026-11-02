@@ -17,6 +17,12 @@ eframe = { workspace = true, features = ["clipboard", "links"] }
 egui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+interprocess = "2"
+self-replace = "1.5"
 
 [lints]
 workspace = true
+
+[target."cfg(windows)".dependencies]
+tray-icon = "0.26"
+winreg = "0.56"

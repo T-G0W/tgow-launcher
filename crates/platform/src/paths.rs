@@ -82,6 +82,18 @@ impl Paths {
     }
 
     #[must_use]
+    pub fn home(&self) -> PathBuf {
+        self.apps
+            .parent()
+            .map_or_else(|| self.data.clone(), |programs| programs.join(PRODUCT))
+    }
+
+    #[must_use]
+    pub fn is_installed_copy(&self, executable: &Path) -> bool {
+        !self.portable && executable.parent() == Some(self.home().as_path())
+    }
+
+    #[must_use]
     pub fn settings(&self) -> PathBuf {
         self.config.join("settings.json")
     }

@@ -75,18 +75,19 @@ impl Library {
         }
     }
 
-    pub(crate) fn poll(&mut self) -> bool {
+    pub(crate) fn poll(&mut self) -> Vec<(String, String)> {
         let Some(jobs) = &mut self.jobs else {
-            return false;
+            return Vec::new();
         };
         let reports = jobs.poll();
-        let changed = !reports.is_empty();
+        let mut finished = Vec::new();
         for report in reports {
             match report {
                 Report::Phase(app, phase) => {
                     self.phases.insert(app, phase);
                 }
                 Report::Installed(installation) => {
+                    finished.push((installation.app.clone(), installation.version.clone()));
                     self.phases.remove(&installation.app);
                     self.failures.remove(&installation.app);
                     self.detected.remove(&installation.app);
@@ -107,7 +108,7 @@ impl Library {
                 }
             }
         }
-        changed
+        finished
     }
 
     pub(crate) fn install(&mut self, app: &App, platform: &Platform, settings: &Settings) {

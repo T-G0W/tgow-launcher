@@ -2,51 +2,92 @@
 #![forbid(unsafe_code)]
 
 mod backend;
+mod instance;
 mod jobs;
 mod launcher;
 mod library;
+#[cfg(windows)]
+mod tray;
 
 use std::sync::Arc;
 
 use eframe::{NativeOptions, Renderer};
 use egui::{IconData, ViewportBuilder};
 use tgow_core::settings::Settings;
+use tgow_platform::integration::HIDDEN_FLAG;
 use tgow_platform::paths::Paths;
 use tgow_platform::storage;
 
+use crate::instance::Claim;
 use crate::launcher::Launcher;
 
 const APP_ID: &str = "io.github.T_G0W.Launcher";
 const ICON_SIZE: u32 = 128;
 
 fn main() -> eframe::Result {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let hidden = arguments.iter().any(|argument| argument == HIDDEN_FLAG);
+    let message = arguments
+        .iter()
+        .find(|argument| argument.starts_with("tgow:"))
+        .cloned()
+        .unwrap_or_default();
+    let messages = match instance::claim(&message) {
+        Claim::Forwarded => return Ok(()),
+        Claim::First(receiver) => Some(receiver),
+        Claim::Unavailable => None,
+    };
+    let launch = Launch {
+        hidden,
+        messages: std::sync::Mutex::new(messages),
+        initial: message,
+    };
     let paths = Paths::locate();
     let settings = paths
         .as_ref()
         .and_then(|paths| storage::read_text(&paths.settings()))
         .map(|text| Settings::from_json(&text))
         .unwrap_or_default();
-    let result = run(Renderer::Wgpu, paths.as_ref(), &settings);
+    let result = run(Renderer::Wgpu, paths.as_ref(), &settings, &launch);
     if result.is_err() {
-        run(Renderer::Glow, paths.as_ref(), &settings)
+        run(Renderer::Glow, paths.as_ref(), &settings, &launch)
     } else {
         result
     }
 }
 
-fn run(renderer: Renderer, paths: Option<&Paths>, settings: &Settings) -> eframe::Result {
+struct Launch {
+    hidden: bool,
+    messages: std::sync::Mutex<Option<std::sync::mpsc::Receiver<String>>>,
+    initial: String,
+}
+
+fn run(
+    renderer: Renderer,
+    paths: Option<&Paths>,
+    settings: &Settings,
+    launch: &Launch,
+) -> eframe::Result {
     let options = NativeOptions {
-        viewport: viewport(settings),
+        viewport: viewport(settings).with_visible(!launch.hidden),
         renderer,
         centered: settings.window.is_none(),
         ..NativeOptions::default()
     };
     let paths = paths.cloned();
     let settings = settings.clone();
+    let messages = launch.messages.lock().ok().and_then(|mut slot| slot.take());
+    let initial = launch.initial.clone();
     eframe::run_native(
         "T-GOW Launcher",
         options,
-        Box::new(move |creation| Ok(Box::new(Launcher::new(&creation.egui_ctx, paths, settings)))),
+        Box::new(move |creation| {
+            let mut launcher = Launcher::new(&creation.egui_ctx, paths, settings, messages);
+            if !initial.is_empty() {
+                launcher.open(&initial);
+            }
+            Ok(Box::new(launcher))
+        }),
     )
 }
 

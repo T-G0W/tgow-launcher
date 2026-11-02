@@ -102,10 +102,17 @@ pub struct Shell {
     pub(crate) library: pages::library::State,
     pub(crate) detail: pages::app::State,
     pub(crate) copied_at: Option<f64>,
+    notices: Vec<(String, f64)>,
     starfield: Starfield,
 }
 
+const NOTICE_SECONDS: f64 = 5.0;
+
 impl Shell {
+    pub fn notify(&mut self, text: String, now: f64) {
+        self.notices.push((text, now));
+    }
+
     pub fn show(&mut self, ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> Vec<Effect> {
         let mut effects = Vec::new();
         let full = ui.max_rect();
@@ -142,7 +149,61 @@ impl Shell {
         self.sidebar(&mut sidebar_ui, view, settings, expansion, &mut effects);
         let mut content_ui = ui.new_child(UiBuilder::new().max_rect(content));
         self.content(&mut content_ui, view, settings, &mut effects);
+        self.paint_notices(ui, content, time);
         effects
+    }
+
+    fn paint_notices(&mut self, ui: &Ui, area: Rect, now: f64) {
+        self.notices.retain(|(_, at)| now - at < NOTICE_SECONDS);
+        if self.notices.is_empty() {
+            return;
+        }
+        ui.ctx().request_repaint_after(Duration::from_millis(100));
+        let painter = ui.ctx().layer_painter(egui::LayerId::new(
+            egui::Order::Foreground,
+            egui::Id::unique("tgow.notices"),
+        ));
+        let mut bottom = area.bottom() - theme::L;
+        for (text, at) in self.notices.iter().rev() {
+            let age = now - at;
+            let fade = shape::seconds((NOTICE_SECONDS - age).min(0.4) / 0.4).clamp(0.0, 1.0);
+            let galley = painter.layout_job(widgets::job(
+                text,
+                Font::Strong,
+                14.0,
+                theme::TEXT.gamma_multiply(fade),
+            ));
+            let size = galley.size() + vec2(48.0, 28.0);
+            let rect = Rect::from_min_size(
+                pos2(area.right() - theme::L - size.x, bottom - size.y),
+                size,
+            );
+            shape::glow(
+                &painter,
+                rect,
+                8.0,
+                theme::ACCENT.gamma_multiply(0.2 * fade),
+                18,
+            );
+            shape::fill(
+                &painter,
+                rect,
+                8.0,
+                theme::SURFACE_1.gamma_multiply(fade),
+                Stroke::new(1.0, theme::ACCENT.gamma_multiply(fade)),
+            );
+            painter.rect_filled(
+                Rect::from_min_size(rect.min + vec2(0.0, 8.0), vec2(3.0, rect.height() - 16.0)),
+                0.0,
+                theme::ACCENT.gamma_multiply(fade),
+            );
+            painter.galley(
+                pos2(rect.left() + 24.0, rect.center().y - galley.size().y / 2.0),
+                galley,
+                theme::TEXT,
+            );
+            bottom = rect.top() - theme::S;
+        }
     }
 
     fn title_bar(&mut self, ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>) {
