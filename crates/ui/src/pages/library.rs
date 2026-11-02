@@ -21,10 +21,18 @@ pub(crate) enum Filter {
     Updates,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Order {
+    #[default]
+    Name,
+    Newest,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct State {
     pub(crate) search: String,
     pub(crate) filter: Filter,
+    pub(crate) order: Order,
     pub(crate) focus_search: bool,
 }
 
@@ -59,25 +67,37 @@ pub(crate) fn show(
             });
         });
         ui.add_space(theme::M);
-        if !discover {
-            widgets::segmented(
-                ui,
-                &mut shell.library.filter,
-                &[
-                    (Filter::All, view.t(Text::FilterAll)),
-                    (Filter::Installed, view.t(Text::Installed)),
-                    (Filter::Updates, view.t(Text::SettingsUpdates)),
-                ],
-            );
-            ui.add_space(theme::M);
-        }
+        ui.horizontal(|ui| {
+            if !discover {
+                widgets::segmented(
+                    ui,
+                    &mut shell.library.filter,
+                    &[
+                        (Filter::All, view.t(Text::FilterAll)),
+                        (Filter::Installed, view.t(Text::Installed)),
+                        (Filter::Updates, view.t(Text::SettingsUpdates)),
+                    ],
+                );
+            }
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                widgets::segmented(
+                    ui,
+                    &mut shell.library.order,
+                    &[
+                        (Order::Newest, view.t(Text::SortNewest)),
+                        (Order::Name, view.t(Text::SortName)),
+                    ],
+                );
+            });
+        });
+        ui.add_space(theme::M);
         let filter = if discover {
             Filter::All
         } else {
             shell.library.filter
         };
         let needle = shell.library.search.trim().to_lowercase();
-        let apps: Vec<&App> = view
+        let mut apps: Vec<&App> = view
             .apps
             .iter()
             .filter(|app| matches_filter(app, view, filter))
@@ -90,6 +110,7 @@ pub(crate) fn show(
                         .is_some_and(|text| text.to_lowercase().contains(&needle))
             })
             .collect();
+        sort(&mut apps, shell.library.order);
         if apps.is_empty() {
             let (title, body) = if view.status == CatalogStatus::Loading {
                 (Text::CatalogLoading, Text::CatalogEmptyBody)
@@ -117,6 +138,24 @@ pub(crate) fn show(
             ui.add_space(GAP - ui.spacing().item_spacing.y);
         }
     });
+}
+
+fn sort(apps: &mut [&App], order: Order) {
+    match order {
+        Order::Name => apps.sort_by_cached_key(|app| app.title().to_lowercase()),
+        Order::Newest => apps.sort_by(|left, right| {
+            published(right).cmp(&published(left)).then_with(|| {
+                left.title()
+                    .to_lowercase()
+                    .cmp(&right.title().to_lowercase())
+            })
+        }),
+    }
+}
+
+fn published(app: &App) -> Option<&str> {
+    app.manifest()
+        .and_then(|manifest| manifest.published.as_deref())
 }
 
 fn matches_filter(app: &App, view: &View<'_>, filter: Filter) -> bool {

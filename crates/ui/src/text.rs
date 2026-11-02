@@ -103,6 +103,8 @@ pub enum Text {
     Failed,
     WelcomeBody,
     FilterAll,
+    SortName,
+    SortNewest,
     RunWithoutInstall,
 }
 
@@ -262,6 +264,8 @@ impl Text {
             ),
             Self::RunWithoutInstall => ("Ohne Installation starten", "Run without installing"),
             Self::FilterAll => ("Alle", "All"),
+            Self::SortName => ("Name", "Name"),
+            Self::SortNewest => ("Neueste", "Newest"),
             Self::LinksPending => (
                 "Discord und Website folgen.",
                 "Discord and website coming soon.",
