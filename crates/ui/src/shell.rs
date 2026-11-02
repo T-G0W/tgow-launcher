@@ -147,6 +147,7 @@ impl Shell {
         );
         let content = Rect::from_min_max(pos2(sidebar.right(), title.bottom()), full.max);
 
+        self.shortcuts(ui, &mut effects);
         let mut title_ui = ui.new_child(UiBuilder::new().max_rect(title));
         self.title_bar(&mut title_ui, view, &mut effects);
         let mut sidebar_ui = ui.new_child(UiBuilder::new().max_rect(sidebar));
@@ -155,6 +156,34 @@ impl Shell {
         self.content(&mut content_ui, view, settings, &mut effects);
         self.paint_notices(ui, content, time);
         effects
+    }
+
+    fn shortcuts(&mut self, ui: &Ui, effects: &mut Vec<Effect>) {
+        let (search, settings, downloads, refresh, back) = ui.input_mut(|input| {
+            (
+                input.consume_key(egui::Modifiers::COMMAND, egui::Key::F),
+                input.consume_key(egui::Modifiers::COMMAND, egui::Key::Comma),
+                input.consume_key(egui::Modifiers::COMMAND, egui::Key::J),
+                input.consume_key(egui::Modifiers::NONE, egui::Key::F5),
+                input.key_pressed(egui::Key::Escape),
+            )
+        });
+        if search {
+            self.page = Page::Library;
+            self.library.focus_search = true;
+        }
+        if settings {
+            self.page = Page::Settings;
+        }
+        if downloads {
+            self.page = Page::Downloads;
+        }
+        if refresh {
+            effects.push(Effect::CheckNow);
+        }
+        if back && matches!(self.page, Page::App(_)) {
+            self.page = Page::Library;
+        }
     }
 
     fn paint_notices(&mut self, ui: &Ui, area: Rect, now: f64) {

@@ -100,6 +100,7 @@ pub enum Text {
     UpdateAvailable,
     Failed,
     WelcomeBody,
+    FilterAll,
     RunWithoutInstall,
 }
 
@@ -256,6 +257,7 @@ impl Text {
                 "Install the launcher for your user. No administrator rights are needed, and it keeps every T-GOW project up to date automatically.",
             ),
             Self::RunWithoutInstall => ("Ohne Installation starten", "Run without installing"),
+            Self::FilterAll => ("Alle", "All"),
             Self::LinksPending => (
                 "Discord und Website folgen.",
                 "Discord and website coming soon.",

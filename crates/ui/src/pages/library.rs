@@ -13,9 +13,19 @@ const CARD_MIN_WIDTH: f32 = 300.0;
 const CARD_HEIGHT: f32 = 214.0;
 const GAP: f32 = 20.0;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Filter {
+    #[default]
+    All,
+    Installed,
+    Updates,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct State {
     pub(crate) search: String,
+    pub(crate) filter: Filter,
+    pub(crate) focus_search: bool,
 }
 
 pub(crate) fn show(
@@ -45,14 +55,32 @@ pub(crate) fn show(
                     effects.push(Effect::CheckNow);
                 }
                 ui.add_space(theme::S);
-                search_box(ui, &mut shell.library.search, view);
+                search_box(ui, &mut shell.library, view);
             });
         });
-        ui.add_space(theme::L);
+        ui.add_space(theme::M);
+        if !discover {
+            widgets::segmented(
+                ui,
+                &mut shell.library.filter,
+                &[
+                    (Filter::All, view.t(Text::FilterAll)),
+                    (Filter::Installed, view.t(Text::Installed)),
+                    (Filter::Updates, view.t(Text::SettingsUpdates)),
+                ],
+            );
+            ui.add_space(theme::M);
+        }
+        let filter = if discover {
+            Filter::All
+        } else {
+            shell.library.filter
+        };
         let needle = shell.library.search.trim().to_lowercase();
         let apps: Vec<&App> = view
             .apps
             .iter()
+            .filter(|app| matches_filter(app, view, filter))
             .filter(|app| {
                 needle.is_empty()
                     || app.title().to_lowercase().contains(&needle)
@@ -91,7 +119,18 @@ pub(crate) fn show(
     });
 }
 
-fn search_box(ui: &mut Ui, search: &mut String, view: &View<'_>) {
+fn matches_filter(app: &App, view: &View<'_>, filter: Filter) -> bool {
+    let installation = view.installed.get(&app.id);
+    match filter {
+        Filter::All => true,
+        Filter::Installed => installation.is_some(),
+        Filter::Updates => installation
+            .zip(app.manifest())
+            .is_some_and(|(installation, manifest)| installation.is_outdated(manifest)),
+    }
+}
+
+fn search_box(ui: &mut Ui, state: &mut State, view: &View<'_>) {
     let (rect, _) = ui.allocate_exact_size(vec2(260.0, 36.0), Sense::hover());
     shape::fill(
         ui.painter(),
@@ -110,14 +149,18 @@ fn search_box(ui: &mut Ui, search: &mut String, view: &View<'_>) {
         pos2(rect.left() + 34.0, rect.top() + 4.0),
         pos2(rect.right() - 8.0, rect.bottom() - 4.0),
     );
-    ui.put(
+    let response = ui.put(
         field,
-        egui::TextEdit::singleline(search)
+        egui::TextEdit::singleline(&mut state.search)
             .hint_text(view.t(Text::Search))
             .frame(egui::Frame::NONE)
             .font(Font::Body.id(14.0))
             .align(egui::Align2::LEFT_CENTER),
     );
+    if state.focus_search {
+        state.focus_search = false;
+        response.request_focus();
+    }
 }
 
 fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
