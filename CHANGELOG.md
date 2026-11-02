@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.1.0
+## 0.2.0
+
+First public release.
 
 - Catalog of every T-G0W repository with the tgow-launcher topic and a signed release
 - Automatic detection of operating system, CPU architecture and Linux distribution
