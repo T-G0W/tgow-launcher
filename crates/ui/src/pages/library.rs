@@ -1,4 +1,4 @@
-use egui::{Align2, Rect, Response, Sense, Stroke, Ui, Vec2, pos2, vec2};
+use egui::{Align2, Rect, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2, vec2};
 use tgow_core::catalog::{App, ReleaseState};
 
 use super::{accent_of, initial, paint_chip};
@@ -204,6 +204,10 @@ fn search_box(ui: &mut Ui, state: &mut State, view: &View<'_>) {
 
 fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
     let (rect, response) = ui.allocate_exact_size(vec2(width, CARD_HEIGHT), Sense::click());
+    let (label, color) = status(app, view);
+    response.widget_info(|| {
+        WidgetInfo::labeled(Role::Button, true, format!("{}, {label}", app.title()))
+    });
     if !ui.is_rect_visible(rect) {
         return response;
     }
@@ -279,13 +283,13 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         painter.layout_job(job),
         theme::TEXT_MUTED,
     );
-    let (label, color) = status(app, view);
     paint_chip(
         painter,
         pos2(rect.left() + 20.0, rect.bottom() - 40.0),
         &label,
         color,
     );
+    widgets::focus_ring(ui, &response, rect, 12.0);
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 

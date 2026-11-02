@@ -514,7 +514,7 @@ pub fn progress_button(ui: &mut Ui, label: &str, fraction: Option<f32>) -> Respo
     response
 }
 
-fn focus_ring(ui: &Ui, response: &Response, rect: Rect, cut: f32) {
+pub(crate) fn focus_ring(ui: &Ui, response: &Response, rect: Rect, cut: f32) {
     if response.has_focus() {
         ui.painter().add(Shape::closed_line(
             shape::normform(rect.expand(3.0), cut + 1.0),
