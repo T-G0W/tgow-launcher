@@ -2,7 +2,9 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::paths::{PRODUCT, Paths};
+#[cfg(windows)]
+use crate::paths::PRODUCT;
+use crate::paths::Paths;
 
 pub const UNINSTALL_FLAG: &str = "--uninstall-self";
 pub const EXECUTABLE: &str = if cfg!(windows) {
@@ -108,11 +110,42 @@ fn unregister() -> io::Result<()> {
 }
 
 #[cfg(not(windows))]
-fn register(_target: &Path, _version: &str) -> io::Result<()> {
-    Ok(())
+fn desktop_entry() -> Option<PathBuf> {
+    std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(|| {
+            std::env::var_os("HOME").map(|home| Path::new(&home).join(".local").join("share"))
+        })
+        .map(|data| data.join("applications").join("tgow-launcher.desktop"))
+}
+
+#[cfg(not(windows))]
+fn register(target: &Path, version: &str) -> io::Result<()> {
+    let Some(file) = desktop_entry() else {
+        return Ok(());
+    };
+    let entry = format!(
+        "[Desktop Entry]
+Type=Application
+Name=T-GOW Launcher
+Version=1.5
+X-TGOW-Version={version}
+Exec=\"{}\" %u
+Icon=io.github.T_G0W.Launcher
+Categories=Utility;
+MimeType=x-scheme-handler/tgow;
+StartupWMClass=io.github.T_G0W.Launcher
+",
+        target.display()
+    );
+    crate::storage::write_atomic(&file, entry.as_bytes())
 }
 
 #[cfg(not(windows))]
 fn unregister() -> io::Result<()> {
-    Ok(())
+    match desktop_entry().map(fs::remove_file) {
+        Some(Err(error)) if error.kind() != io::ErrorKind::NotFound => Err(error),
+        _ => Ok(()),
+    }
 }
