@@ -333,7 +333,7 @@ impl eframe::App for Launcher {
             let to_tray = self.settings.close_to_tray && self.has_tray();
             self.restart(ctx, to_tray);
         } else if close
-            && self.lifecycle == Lifecycle::Running
+            && self.lifecycle != Lifecycle::Quitting
             && self.settings.close_to_tray
             && self.has_tray()
         {
