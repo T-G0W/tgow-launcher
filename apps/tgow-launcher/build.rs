@@ -8,7 +8,10 @@ fn main() {
         .set("ProductName", "T-GOW Launcher")
         .set("FileDescription", "T-GOW Launcher")
         .set("CompanyName", "T-GOW")
-        .set("LegalCopyright", "T-GOW")
+        .set(
+            "LegalCopyright",
+            "Copyright (c) 2026 T-GOW. All rights reserved.",
+        )
         .set("OriginalFilename", "tgow-launcher.exe")
         .set("InternalName", "tgow-launcher");
     resource

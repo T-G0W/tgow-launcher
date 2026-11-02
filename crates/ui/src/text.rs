@@ -237,7 +237,10 @@ impl Text {
                 "GitHub sieht bei jeder Prüfung deine IP-Adresse. Sonst verlässt nichts deinen Rechner.",
                 "GitHub sees your IP address on every check. Nothing else leaves your computer.",
             ),
-            Self::License => ("Lizenz: MIT oder Apache-2.0", "License: MIT or Apache-2.0"),
+            Self::License => (
+                "Lizenz: T-GOW Launcher License. Kostenlos nutzen, aber nicht verkaufen, verändern oder weitergeben.",
+                "License: T-GOW Launcher License. Free to use, but not to sell, change or pass on.",
+            ),
             Self::Fonts => (
                 "Schriften (SIL Open Font License)",
                 "Fonts (SIL Open Font License)",

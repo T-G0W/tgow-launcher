@@ -1,0 +1,85 @@
+T-GOW Launcher License 1.0
+
+Copyright (c) 2026 T-GOW. All rights reserved.
+
+In short: you may download T-GOW Launcher from its official source and use it
+for free. You may not sell it, change it, build on it or pass it on. The full
+terms below are what counts.
+
+1. Definitions
+
+   "Software" means T-GOW Launcher in source and binary form, including its
+   tools, build scripts, workflows, documentation, images, icons and logo.
+   "Official source" means the releases and the repository of T-GOW Launcher
+   published by T-GOW on GitHub. "You" means any person or organisation that
+   obtains the Software.
+
+2. What you may do
+
+   a. Download the Software from the official source.
+   b. Install and run it on devices you own or control, for private or
+      business use, free of charge.
+   c. Read the source code to understand how the Software works, for example
+      to check its security.
+
+3. What you may not do
+
+   Unless T-GOW has given you written permission, you may not:
+
+   a. sell, rent, lease or license the Software, or offer it as part of a paid
+      product or service;
+   b. modify, translate, adapt or rewrite the Software, or create any work
+      based on it, including forks that are developed further;
+   c. copy and distribute the Software or any part of it to others, upload it
+      to other websites, stores or package repositories, or pass it on in any
+      other way; others can get it from the official source;
+   d. remove or change copyright notices, this license or the name and logo of
+      T-GOW;
+   e. use the name "T-GOW", "T-G0W" or "T-GOW Launcher" or the logo for your
+      own products, or in a way that suggests T-GOW endorses you.
+
+   Building the Software from source only to run it yourself on your own
+   devices is allowed, as long as you do not change the code and do not pass
+   the result on.
+
+4. Third-party components
+
+   The Software contains open-source components by other authors. They remain
+   under their own licenses, which are listed in THIRD-PARTY-LICENSES.txt.
+   Nothing in this license limits the rights those licenses give you for those
+   components. The fonts Chakra Petch, Bai Jamjuree and JetBrains Mono are
+   used under the SIL Open Font License 1.1.
+
+5. Contributions
+
+   If you send T-GOW an issue, an idea or a pull request, you allow T-GOW to
+   use, change and publish it as part of the Software without payment.
+
+6. GitHub
+
+   If the repository is public, the GitHub Terms of Service may let you view
+   and fork it on GitHub. That does not give you any right beyond those terms
+   and beyond section 2 of this license.
+
+7. Termination
+
+   If you break this license, your rights under it end automatically. You must
+   then stop using the Software and delete all copies.
+
+8. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+9. Limitation of liability
+
+   TO THE EXTENT PERMITTED BY LAW, T-GOW IS NOT LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE. NOTHING IN THIS
+   LICENSE LIMITS LIABILITY THAT CANNOT BE LIMITED BY LAW, SUCH AS LIABILITY
+   FOR INTENT OR GROSS NEGLIGENCE.
+
+10. Everything else
+
+   All rights not expressly granted in this license are reserved by T-GOW. If
+   a part of this license is invalid, the rest stays in force.

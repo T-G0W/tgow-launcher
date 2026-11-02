@@ -64,13 +64,7 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mu
             widgets::text(ui, view.t(Text::Promise), Font::Strong, 15.0, theme::TEXT);
             widgets::paragraph(ui, view.t(Text::PrivacyNote), theme::TEXT_MUTED);
             ui.add_space(theme::L);
-            widgets::text(
-                ui,
-                view.t(Text::License),
-                Font::Body,
-                14.0,
-                theme::TEXT_MUTED,
-            );
+            widgets::paragraph(ui, view.t(Text::License), theme::TEXT_MUTED);
             egui::CollapsingHeader::new(view.t(Text::Fonts))
                 .id_salt("fonts")
                 .show(ui, |ui| {

@@ -14,3 +14,4 @@
 - Keyboard shortcuts, accessible names and focus rings for every control
 - OpenGL renderer first, wgpu as fallback
 - List of all bundled open-source crates with their licenses
+- T-GOW Launcher License: free to use, not to sell, change or pass on

@@ -14,7 +14,7 @@
   <img alt="100% Rust" src="https://img.shields.io/badge/100%25-Rust-b7410e?style=flat-square&logo=rust">
   <img alt="Windows 10 and 11, x64 and ARM64" src="https://img.shields.io/badge/Windows%2010%20%C2%B7%2011-x64%20%C2%B7%20ARM64-3b82f6?style=flat-square&logo=windows&logoColor=white">
   <img alt="Linux x86_64" src="https://img.shields.io/badge/Linux-x86__64-f0b429?style=flat-square&logo=linux&logoColor=white">
-  <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-3a3a3a?style=flat-square">
+  <img alt="License: T-GOW Launcher License" src="https://img.shields.io/badge/license-T--GOW%20Launcher%20License-3a3a3a?style=flat-square">
   <a href="https://github.com/T-G0W/tgow-launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/T-G0W/tgow-launcher?style=flat-square&color=4fb8ff"></a>
   <a href="https://github.com/T-G0W/tgow-launcher/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/T-G0W/tgow-launcher/total?style=flat-square&color=4cc36b"></a>
   <a href="https://github.com/T-G0W/tgow-launcher/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/T-G0W/tgow-launcher?style=flat-square&color=8b5cf6"></a>
@@ -256,12 +256,12 @@ Issues are welcome in English or German. Security problems go through private re
 
 ## License and credits
 
-T-GOW Launcher is © 2026 T-GOW and dual-licensed under either of
+T-GOW Launcher is © 2026 T-GOW, all rights reserved, under the [T-GOW Launcher License](LICENSE).
 
-- [MIT License](LICENSE-MIT)
-- [Apache License, Version 2.0](LICENSE-APACHE)
+- **Allowed:** download it from this repository or its releases, install it and use it for free, read the source.
+- **Not allowed:** selling it, changing or rewriting it, building on it, or passing it on to others.
 
-at your option.
+The open-source components inside keep their own licenses.
 
 The fonts Chakra Petch, Bai Jamjuree and JetBrains Mono are used under the SIL Open Font License 1.1. The licenses of all bundled crates are collected in [`THIRD-PARTY-LICENSES.txt`](THIRD-PARTY-LICENSES.txt), generated with `cargo xtask licenses`.
 
