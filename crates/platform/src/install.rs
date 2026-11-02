@@ -171,6 +171,7 @@ fn portable_file(asset: &Asset, file: &Path, target: &Target<'_>) -> Result<Inst
     let destination = folder.join(&asset.file);
     fs::copy(file, &destination)?;
     process::make_executable(&destination)?;
+    prune(target);
     Ok(portable(target, asset.kind, folder, destination))
 }
 
@@ -201,7 +202,20 @@ fn unpacked(
         return Err(Error::MissingLaunch);
     }
     process::make_executable(&launch)?;
+    prune(target);
     Ok(portable(target, asset.kind, folder, launch))
+}
+
+fn prune(target: &Target<'_>) {
+    let keep = target.folder();
+    let Ok(entries) = fs::read_dir(target.root.join(target.app)) else {
+        return;
+    };
+    for path in entries.flatten().map(|entry| entry.path()) {
+        if path != keep && path.is_dir() {
+            let _ = fs::remove_dir_all(path);
+        }
+    }
 }
 
 fn portable(target: &Target<'_>, kind: Kind, folder: PathBuf, launch: PathBuf) -> Installation {
@@ -415,6 +429,26 @@ mod tests {
         uninstall(&installation).unwrap();
         assert!(!launch.exists());
         assert!(!root.join("apps").join("tool").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn an_update_replaces_the_previous_version_folder() {
+        let root = scratch("prune");
+        let package = root.join("package.zip");
+        zip_with(&package, &[("tool.exe", b"MZ")]);
+        let apps = root.join("apps");
+        for version in ["1.0.0", "1.1.0"] {
+            let target = Target {
+                app: "tool",
+                name: "Tool",
+                version,
+                root: &apps,
+            };
+            install(&asset(Kind::Zip, Some("tool.exe")), &package, &target).unwrap();
+        }
+        assert!(!apps.join("tool").join("1.0.0").exists());
+        assert!(apps.join("tool").join("1.1.0").join("tool.exe").is_file());
         fs::remove_dir_all(root).unwrap();
     }
 
