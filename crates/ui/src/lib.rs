@@ -6,6 +6,7 @@ mod pages;
 mod popover;
 pub mod shape;
 pub mod shell;
+pub mod splash;
 mod starfield;
 pub mod text;
 pub mod theme;

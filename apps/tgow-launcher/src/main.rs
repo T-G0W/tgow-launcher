@@ -99,20 +99,21 @@ fn run(
     launch: &Launch,
 ) -> eframe::Result {
     let options = NativeOptions {
-        viewport: viewport(settings).with_visible(!launch.hidden),
+        viewport: viewport(settings, !launch.hidden).with_visible(!launch.hidden),
         renderer,
-        centered: settings.window.is_none(),
+        centered: !launch.hidden || settings.window.is_none(),
         ..NativeOptions::default()
     };
     let paths = paths.cloned();
     let settings = settings.clone();
     let messages = launch.messages.lock().ok().and_then(|mut slot| slot.take());
     let initial = launch.initial.clone();
+    let splash = !launch.hidden;
     eframe::run_native(
         "T-GOW Launcher",
         options,
         Box::new(move |creation| {
-            let mut launcher = Launcher::new(&creation.egui_ctx, paths, settings, messages);
+            let mut launcher = Launcher::new(&creation.egui_ctx, paths, settings, messages, splash);
             if !initial.is_empty() {
                 launcher.open(&initial);
             }
@@ -121,7 +122,7 @@ fn run(
     )
 }
 
-fn viewport(settings: &Settings) -> ViewportBuilder {
+fn viewport(settings: &Settings, splash: bool) -> ViewportBuilder {
     let icon = IconData {
         rgba: tgow_ui::brand::icon_rgba(ICON_SIZE),
         width: ICON_SIZE,
@@ -135,6 +136,12 @@ fn viewport(settings: &Settings) -> ViewportBuilder {
         .with_inner_size([1280.0, 760.0])
         .with_min_inner_size([1024.0, 640.0])
         .with_icon(Arc::new(icon));
+    if splash {
+        return viewport
+            .with_inner_size(tgow_ui::splash::SIZE)
+            .with_min_inner_size(tgow_ui::splash::SIZE)
+            .with_resizable(false);
+    }
     if let Some(window) = settings.window {
         viewport = viewport
             .with_position([window.x, window.y])

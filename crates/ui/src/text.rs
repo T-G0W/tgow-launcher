@@ -123,6 +123,13 @@ pub enum Text {
     Details,
     NotInstalled,
     More,
+    SplashStarting,
+    SplashChecking,
+    SplashDownloading,
+    SplashInstalling,
+    SplashRestarting,
+    SplashUpToDate,
+    SplashOffline,
 }
 
 impl Text {
@@ -307,6 +314,16 @@ impl Text {
             Self::Details => ("Details anzeigen", "Show details"),
             Self::NotInstalled => ("Nicht installiert", "Not installed"),
             Self::More => ("Weitere Aktionen", "More actions"),
+            Self::SplashStarting => ("Wird gestartet", "Starting"),
+            Self::SplashChecking => ("Suche nach Updates", "Checking for updates"),
+            Self::SplashDownloading => ("Update wird geladen", "Downloading update"),
+            Self::SplashInstalling => ("Update wird installiert", "Installing update"),
+            Self::SplashRestarting => ("Wird neu gestartet", "Restarting"),
+            Self::SplashUpToDate => ("Alles ist aktuell", "Everything is up to date"),
+            Self::SplashOffline => (
+                "GitHub ist nicht erreichbar, der Launcher startet trotzdem",
+                "GitHub is unreachable, starting anyway",
+            ),
         }
     }
 }

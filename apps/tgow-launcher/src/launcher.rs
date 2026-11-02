@@ -10,7 +10,8 @@ use tgow_core::settings::{Language, Settings, UpdateMode, WindowGeometry};
 use tgow_platform::paths::Paths;
 use tgow_platform::{integration, setup, storage};
 
-use tgow_ui::shell::{Artwork, CatalogStatus, Effect, Page, Shell, View};
+use tgow_ui::shell::{Artwork, CatalogStatus, Effect, Page, Phase, Shell, View};
+use tgow_ui::splash::{Screen, Splash, Step};
 use tgow_ui::text::{self, Text};
 
 use crate::backend::{Backend, Command, Event};
@@ -24,6 +25,17 @@ enum Lifecycle {
     RestartPending,
     Quitting,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Stage {
+    Splash(Option<f64>),
+    Main,
+}
+
+const SPLASH_MINIMUM: f64 = 1.6;
+const SPLASH_MAXIMUM: f64 = 12.0;
+const MAIN_SIZE: [f32; 2] = [1280.0, 760.0];
+const MAIN_MINIMUM: [f32; 2] = [1024.0, 640.0];
 
 pub(crate) struct Launcher {
     shell: Shell,
@@ -44,6 +56,8 @@ pub(crate) struct Launcher {
     lifecycle: Lifecycle,
     guard: Option<Guard>,
     confirmed: bool,
+    stage: Stage,
+    splash: Screen,
     #[cfg(windows)]
     tray: Option<crate::tray::Tray>,
 }
@@ -54,6 +68,7 @@ impl Launcher {
         paths: Option<Paths>,
         settings: Settings,
         messages: Option<Receiver<String>>,
+        splash: bool,
     ) -> Self {
         tgow_ui::theme::install(ctx);
         let _ = crate::instance::WAKER.set(ctx.clone());
@@ -102,6 +117,12 @@ impl Launcher {
             lifecycle: Lifecycle::Running,
             guard,
             confirmed: false,
+            stage: if splash {
+                Stage::Splash(None)
+            } else {
+                Stage::Main
+            },
+            splash: Screen::default(),
             #[cfg(windows)]
             tray,
         };
@@ -268,6 +289,81 @@ impl Launcher {
         }
     }
 
+    fn splash_step(&mut self, ctx: &Context, elapsed: f64) -> (Step, Option<f32>, bool) {
+        let version = self.latest_release.clone().unwrap_or_default();
+        if self.lifecycle == Lifecycle::RestartPending {
+            self.restart(ctx, false);
+            return (Step::Restarting, None, false);
+        }
+        match self
+            .library
+            .phases
+            .get(tgow_core::catalog::LAUNCHER_REPO)
+            .copied()
+        {
+            Some(phase @ (Phase::Waiting | Phase::Downloading { .. })) => {
+                return (Step::Downloading(version), phase.fraction(), false);
+            }
+            Some(_) => return (Step::Installing(version), None, false),
+            None => {}
+        }
+        let step = match self.status {
+            CatalogStatus::Loading if elapsed < 0.6 => Step::Starting,
+            CatalogStatus::Loading => Step::Checking,
+            CatalogStatus::Ready => Step::UpToDate,
+            CatalogStatus::Offline | CatalogStatus::Limited { .. } => Step::Offline,
+        };
+        let settled = self.status != CatalogStatus::Loading;
+        let done = (settled && elapsed >= SPLASH_MINIMUM) || elapsed >= SPLASH_MAXIMUM;
+        (step, settled.then_some(1.0), done)
+    }
+
+    fn enter_main(&mut self, ctx: &Context) {
+        self.stage = Stage::Main;
+        let splash = ctx.input(|input| input.viewport().outer_rect);
+        let (size, position) = match self.settings.window {
+            Some(window) => (
+                egui::vec2(window.width, window.height),
+                Some(egui::pos2(window.x, window.y)),
+            ),
+            None => (
+                egui::Vec2::from(MAIN_SIZE),
+                splash.map(|rect| rect.center() - egui::Vec2::from(MAIN_SIZE) / 2.0),
+            ),
+        };
+        ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(egui::Vec2::from(
+            MAIN_MINIMUM,
+        )));
+        ctx.send_viewport_cmd(ViewportCommand::Resizable(true));
+        ctx.send_viewport_cmd(ViewportCommand::InnerSize(size));
+        if let Some(position) = position {
+            ctx.send_viewport_cmd(ViewportCommand::OuterPosition(position));
+        }
+    }
+
+    fn show_splash(&mut self, ui: &mut Ui) {
+        let ctx = ui.ctx().clone();
+        let now = ctx.input(|input| input.time);
+        let since = match self.stage {
+            Stage::Splash(Some(since)) => since,
+            _ => now,
+        };
+        self.stage = Stage::Splash(Some(since));
+        let (step, progress, done) = self.splash_step(&ctx, now - since);
+        let splash = Splash {
+            language: self.language(),
+            version: env!("CARGO_PKG_VERSION"),
+            step,
+            progress,
+        };
+        if self.splash.show(ui, &splash) {
+            self.lifecycle = Lifecycle::Quitting;
+            ctx.send_viewport_cmd(ViewportCommand::Close);
+        } else if done {
+            self.enter_main(&ctx);
+        }
+    }
+
     fn restart(&mut self, ctx: &Context, hidden: bool) {
         let Ok(executable) = std::env::current_exe() else {
             return;
@@ -409,6 +505,10 @@ impl eframe::App for Launcher {
         let ctx = ui.ctx().clone();
         let reduced = self.settings.motion.is_reduced();
         tgow_ui::widgets::set_reduced_motion(&ctx, reduced);
+        if matches!(self.stage, Stage::Splash(_)) {
+            self.show_splash(ui);
+            return;
+        }
         let language = self.language();
         let checked = self
             .checked_at
