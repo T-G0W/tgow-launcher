@@ -4,6 +4,7 @@ mod aifiles;
 mod comments;
 mod commits;
 mod error;
+mod icons;
 mod names;
 mod repo;
 mod report;
@@ -24,6 +25,7 @@ Commands:
   names            Reject catch-all type and module names
   aifiles          Reject ai tool files in the repository
   commits [range]  Check commit messages, identity and time zone
+  icons            Render assets/brand/tgow-launcher.ico from the logo geometry
   precommit        Run the fast checks for the pre-commit hook
   install-hooks    Install the local pre-commit hook
 ";
@@ -65,6 +67,7 @@ fn dispatch(repo: &Repo, args: &[String]) -> Result<Vec<Finding>, Error> {
         "commits" => commit_check(repo, rest.first().map_or("HEAD", String::as_str)),
         "precommit" => precommit(repo),
         "install-hooks" => install_hooks(repo),
+        "icons" => icons::write(&repo.root),
         _ => Err(Error::Usage(USAGE.to_owned())),
     }
 }

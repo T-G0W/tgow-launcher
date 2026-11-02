@@ -10,6 +10,7 @@ publish.workspace = true
 
 [dependencies]
 ra-ap-rustc_lexer = "=0.179.0"
+tgow-ui.workspace = true
 
 [lints]
 workspace = true
