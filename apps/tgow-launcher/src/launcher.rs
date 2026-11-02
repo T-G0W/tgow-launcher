@@ -2,17 +2,20 @@ use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
 use egui::{Context, OpenUrl, Ui, ViewportCommand};
+use std::collections::BTreeMap;
 use tgow_core::catalog::App;
 use tgow_core::deeplink::DeepLink;
 use tgow_core::platform::Platform;
 use tgow_core::settings::{Language, Settings, UpdateMode, WindowGeometry};
 use tgow_platform::paths::Paths;
 use tgow_platform::{integration, setup, storage};
-use tgow_ui::shell::{CatalogStatus, Effect, Page, Shell, View};
+
+use tgow_ui::shell::{Artwork, CatalogStatus, Effect, Page, Shell, View};
 use tgow_ui::text::{self, Text};
 
 use crate::backend::{Backend, Command, Event};
 use crate::library::Library;
+use crate::media::Slot;
 use crate::update::{self, Guard};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,6 +38,7 @@ pub(crate) struct Launcher {
     backend: Backend,
     interval: u32,
     library: Library,
+    artwork: BTreeMap<String, Artwork>,
     messages: Option<Receiver<String>>,
     autostart: Option<bool>,
     lifecycle: Lifecycle,
@@ -92,6 +96,7 @@ impl Launcher {
             backend,
             interval,
             library,
+            artwork: BTreeMap::new(),
             messages,
             autostart: None,
             lifecycle: Lifecycle::Running,
@@ -190,7 +195,7 @@ impl Launcher {
         }
     }
 
-    fn poll_catalog(&mut self) {
+    fn poll_catalog(&mut self, ctx: &Context) {
         for event in self.backend.poll() {
             match event {
                 Event::Apps(apps) => {
@@ -200,6 +205,18 @@ impl Launcher {
                         .update_outdated(&self.apps, &self.platform, &self.settings);
                 }
                 Event::Launcher(app) => self.consider_self_update(&app),
+                Event::Media(app, slot, image) => {
+                    let texture = ctx.load_texture(
+                        format!("{app}-{slot:?}"),
+                        image,
+                        egui::TextureOptions::LINEAR,
+                    );
+                    let artwork = self.artwork.entry(app).or_default();
+                    match slot {
+                        Slot::Icon => artwork.icon = Some(texture),
+                        Slot::Hero => artwork.hero = Some(texture),
+                    }
+                }
                 Event::Status(status) => self.status = status,
                 Event::Checked => self.checked_at = Some(Instant::now()),
             }
@@ -360,7 +377,7 @@ impl eframe::App for Launcher {
         }
         #[cfg(windows)]
         self.poll_tray(ctx);
-        self.poll_catalog();
+        self.poll_catalog(ctx);
         self.poll_library(ctx.input(|input| input.time));
         let close = ctx.input(|input| input.viewport().close_requested());
         if close && self.lifecycle == Lifecycle::RestartPending && !self.library.is_busy() {
@@ -399,6 +416,7 @@ impl eframe::App for Launcher {
             installed: &self.library.installed,
             jobs: &self.library.phases,
             failures: &self.library.failures,
+            artwork: &self.artwork,
         };
         let effects = self.shell.show(ui, &view, &mut self.settings);
         self.apply(&ctx, effects);

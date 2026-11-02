@@ -50,6 +50,24 @@ fn quarter_arc(center: Pos2, radius: f32) -> impl Iterator<Item = Pos2> {
 }
 
 #[must_use]
+pub fn cover_uv(image: egui::Vec2, target: egui::Vec2) -> Rect {
+    if image.x <= 0.0 || image.y <= 0.0 || target.x <= 0.0 || target.y <= 0.0 {
+        return Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+    }
+    let image_ratio = image.x / image.y;
+    let target_ratio = target.x / target.y;
+    if image_ratio > target_ratio {
+        let width = target_ratio / image_ratio;
+        let left = (1.0 - width) / 2.0;
+        Rect::from_min_max(pos2(left, 0.0), pos2(left + width, 1.0))
+    } else {
+        let height = image_ratio / target_ratio;
+        let top = (1.0 - height) / 2.0;
+        Rect::from_min_max(pos2(0.0, top), pos2(1.0, top + height))
+    }
+}
+
+#[must_use]
 pub fn inset_cut(cut: f32, inset: f32) -> f32 {
     (cut - inset * (2.0 - std::f32::consts::SQRT_2)).max(0.0)
 }
@@ -115,6 +133,82 @@ pub fn vertical_gradient(points: &[Pos2], top: Color32, bottom: Color32) -> Mesh
     for index in 1..=count {
         let next = if index == count { 1 } else { index + 1 };
         mesh.add_triangle(0, index, next);
+    }
+    mesh
+}
+
+#[must_use]
+pub fn textured_polygon(
+    points: &[Pos2],
+    frame: Rect,
+    uv: Rect,
+    texture: egui::TextureId,
+    top: f32,
+    bottom: f32,
+) -> Mesh {
+    let mut mesh = Mesh::with_texture(texture);
+    let vertex = |mesh: &mut Mesh, point: Pos2| {
+        let along =
+            ((point - frame.min) / frame.size()).clamp(egui::Vec2::ZERO, egui::Vec2::splat(1.0));
+        let alpha = top + (bottom - top) * along.y;
+        mesh.vertices.push(egui::epaint::Vertex {
+            pos: point,
+            uv: uv.min + along * uv.size(),
+            color: Color32::WHITE.gamma_multiply(alpha.clamp(0.0, 1.0)),
+        });
+    };
+    vertex(&mut mesh, frame.center());
+    for point in points {
+        vertex(&mut mesh, *point);
+    }
+    let count = u32::try_from(points.len()).unwrap_or(0);
+    for index in 1..=count {
+        let next = if index == count { 1 } else { index + 1 };
+        mesh.add_triangle(0, index, next);
+    }
+    mesh
+}
+
+#[must_use]
+pub fn faded_image(rect: Rect, uv: Rect, texture: egui::TextureId, fade_from: f32) -> Mesh {
+    let mut mesh = Mesh::with_texture(texture);
+    let split = rect.top() + rect.height() * fade_from.clamp(0.0, 1.0);
+    let split_uv = uv.top() + uv.height() * fade_from.clamp(0.0, 1.0);
+    let rows = [
+        (rect.top(), uv.top(), Color32::WHITE),
+        (split, split_uv, Color32::WHITE),
+        (rect.bottom(), uv.bottom(), Color32::TRANSPARENT),
+    ];
+    for (y, v, color) in rows {
+        for (x, u) in [(rect.left(), uv.left()), (rect.right(), uv.right())] {
+            mesh.vertices.push(egui::epaint::Vertex {
+                pos: pos2(x, y),
+                uv: pos2(u, v),
+                color,
+            });
+        }
+    }
+    for row in 0..2_u32 {
+        let base = row * 2;
+        mesh.add_triangle(base, base + 1, base + 3);
+        mesh.add_triangle(base, base + 3, base + 2);
+    }
+    mesh
+}
+
+#[must_use]
+pub fn shade(rect: Rect, color: Color32, reach: f32, fade_from: f32) -> Mesh {
+    let mut mesh = Mesh::default();
+    let right = rect.left() + rect.width() * reach.clamp(0.0, 1.0);
+    let split = rect.top() + rect.height() * fade_from.clamp(0.0, 1.0);
+    for (y, strength) in [(rect.top(), 1.0), (split, 1.0), (rect.bottom(), 0.0)] {
+        mesh.colored_vertex(pos2(rect.left(), y), color.gamma_multiply(strength));
+        mesh.colored_vertex(pos2(right, y), Color32::TRANSPARENT);
+    }
+    for row in 0..2_u32 {
+        let base = row * 2;
+        mesh.add_triangle(base, base + 1, base + 3);
+        mesh.add_triangle(base, base + 3, base + 2);
     }
     mesh
 }
@@ -191,6 +285,15 @@ mod tests {
                 .iter()
                 .all(|point| rect.expand(0.01).contains(*point))
         );
+    }
+
+    #[test]
+    fn cover_crops_the_longer_side_symmetrically() {
+        let wide = super::cover_uv(egui::vec2(400.0, 100.0), egui::vec2(200.0, 100.0));
+        assert!((wide.left() - 0.25).abs() < 1e-6 && (wide.right() - 0.75).abs() < 1e-6);
+        assert!((wide.top()).abs() < 1e-6 && (wide.bottom() - 1.0).abs() < 1e-6);
+        let tall = super::cover_uv(egui::vec2(100.0, 400.0), egui::vec2(100.0, 100.0));
+        assert!((tall.top() - 0.375).abs() < 1e-6 && (tall.bottom() - 0.625).abs() < 1e-6);
     }
 
     #[test]

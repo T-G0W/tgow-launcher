@@ -59,6 +59,12 @@ impl Phase {
     }
 }
 
+#[derive(Default)]
+pub struct Artwork {
+    pub icon: Option<egui::TextureHandle>,
+    pub hero: Option<egui::TextureHandle>,
+}
+
 pub struct View<'a> {
     pub language: Language,
     pub platform: &'a Platform,
@@ -69,6 +75,7 @@ pub struct View<'a> {
     pub installed: &'a BTreeMap<String, Installation>,
     pub jobs: &'a BTreeMap<String, Phase>,
     pub failures: &'a BTreeMap<String, String>,
+    pub artwork: &'a BTreeMap<String, Artwork>,
 }
 
 impl View<'_> {

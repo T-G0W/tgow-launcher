@@ -6,6 +6,7 @@ mod instance;
 mod jobs;
 mod launcher;
 mod library;
+mod media;
 #[cfg(windows)]
 mod tray;
 mod update;

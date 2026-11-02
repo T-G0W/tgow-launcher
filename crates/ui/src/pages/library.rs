@@ -186,6 +186,18 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         Stroke::NONE,
     ));
     let band = Rect::from_min_size(rect.min, vec2(rect.width(), 86.0));
+    let artwork = view.artwork.get(&app.id);
+    if let Some(hero) = artwork.and_then(|artwork| artwork.hero.as_ref()) {
+        let uv = shape::cover_uv(hero.size_vec2(), band.size());
+        painter.add(egui::Shape::mesh(shape::textured_polygon(
+            &shape::normform(band, 12.0),
+            band,
+            uv,
+            hero.id(),
+            0.55 + 0.3 * hover,
+            0.0,
+        )));
+    }
     painter.add(egui::Shape::mesh(shape::vertical_gradient(
         &shape::normform(band, 12.0)[..],
         accent.gamma_multiply(0.22 + 0.12 * hover),
@@ -196,20 +208,7 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         Stroke::new(1.0, theme::LINE.lerp_to_gamma(accent, hover * 0.8)),
     ));
     let tile = Rect::from_min_size(rect.min + vec2(20.0, 22.0), Vec2::splat(54.0));
-    shape::fill(
-        painter,
-        tile,
-        10.0,
-        theme::SURFACE_2,
-        Stroke::new(1.0, accent.gamma_multiply(0.7)),
-    );
-    painter.text(
-        tile.center(),
-        Align2::CENTER_CENTER,
-        initial(app.title()),
-        Font::Display.id(28.0),
-        accent,
-    );
+    paint_icon(painter, app, artwork, tile, accent);
     let name = painter.layout_job(widgets::job(app.title(), Font::Heading, 20.0, theme::TEXT));
     painter.galley(
         pos2(tile.right() + 16.0, tile.top() + 4.0),
@@ -249,6 +248,38 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         color,
     );
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+fn paint_icon(
+    painter: &egui::Painter,
+    app: &App,
+    artwork: Option<&crate::shell::Artwork>,
+    tile: Rect,
+    accent: egui::Color32,
+) {
+    shape::fill(
+        painter,
+        tile,
+        10.0,
+        theme::SURFACE_2,
+        Stroke::new(1.0, accent.gamma_multiply(0.7)),
+    );
+    if let Some(icon) = artwork.and_then(|artwork| artwork.icon.as_ref()) {
+        painter.image(
+            icon.id(),
+            tile.shrink(7.0),
+            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
+    } else {
+        painter.text(
+            tile.center(),
+            Align2::CENTER_CENTER,
+            initial(app.title()),
+            Font::Display.id(28.0),
+            accent,
+        );
+    }
 }
 
 pub(crate) fn status(app: &App, view: &View<'_>) -> (String, egui::Color32) {

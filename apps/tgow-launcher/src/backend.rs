@@ -10,7 +10,10 @@ use tgow_net::{Client, Error, Fetch};
 use tgow_platform::storage;
 use tgow_ui::shell::CatalogStatus;
 
+use crate::media::{self, Slot};
+
 const MANIFEST_LIMIT: u64 = 256 * 1024;
+const MEDIA_LIMIT: u64 = 4 * 1024 * 1024;
 const SIGNATURE_LIMIT: u64 = 1024;
 const OFFLINE_RETRY: Duration = Duration::from_secs(120);
 
@@ -21,6 +24,7 @@ pub(crate) enum Command {
 
 pub(crate) enum Event {
     Apps(Vec<App>),
+    Media(String, Slot, egui::ColorImage),
     Launcher(Box<App>),
     Status(CatalogStatus),
     Checked,
@@ -53,6 +57,7 @@ impl Backend {
             ctx,
             interval,
             paused_until: None,
+            shown: Vec::new(),
         };
         let _ = thread::Builder::new()
             .name("catalog".to_owned())
@@ -92,6 +97,7 @@ struct Worker {
     ctx: egui::Context,
     interval: Duration,
     paused_until: Option<Instant>,
+    shown: Vec<String>,
 }
 
 enum Outcome {
@@ -139,6 +145,7 @@ impl Worker {
         let outcome = self.check();
         self.publish_apps();
         self.save();
+        self.publish_media();
         match outcome {
             Outcome::Done => {
                 self.emit(Event::Status(CatalogStatus::Ready));
@@ -250,11 +257,67 @@ impl Worker {
         self.emit(Event::Apps(apps));
     }
 
+    fn publish_media(&mut self) {
+        let Some(folder) = self
+            .cache_file
+            .as_ref()
+            .and_then(|file| file.parent())
+            .map(|cache| cache.join("media"))
+        else {
+            return;
+        };
+        let wanted: Vec<(String, String, String, Slot)> = self
+            .cache
+            .repositories
+            .iter()
+            .filter_map(|repository| {
+                let release = self.cache.releases.get(&repository.name)?;
+                let tag = release.tag.clone()?;
+                let ReleaseState::Verified(manifest) = state(repository, release) else {
+                    return None;
+                };
+                Some(
+                    [
+                        (manifest.icon.clone(), Slot::Icon),
+                        (manifest.hero.clone(), Slot::Hero),
+                    ]
+                    .into_iter()
+                    .filter_map(|(file, slot)| {
+                        Some((repository.name.clone(), tag.clone(), file?, slot))
+                    })
+                    .collect::<Vec<_>>(),
+                )
+            })
+            .flatten()
+            .collect();
+        for (repository, tag, file, slot) in wanted {
+            let key = format!("{repository}/{tag}/{file}");
+            if self.shown.contains(&key) {
+                continue;
+            }
+            let path = folder.join(&repository).join(&tag).join(&file);
+            let bytes = storage_bytes(&path).or_else(|| {
+                let url = catalog::download_url(&repository, &tag, &file);
+                let bytes = self.client.fetch(&url, MEDIA_LIMIT).ok()?;
+                let _ = storage::write_atomic(&path, &bytes);
+                Some(bytes)
+            });
+            if let Some(image) = bytes.as_deref().and_then(media::decode) {
+                self.shown.push(key);
+                self.emit(Event::Media(repository.to_ascii_lowercase(), slot, image));
+            }
+        }
+    }
+
     fn save(&self) {
         if let (Some(file), Ok(json)) = (&self.cache_file, serde_json::to_string(&self.cache)) {
             let _ = storage::write_atomic(file, json.as_bytes());
         }
     }
+}
+
+fn storage_bytes(path: &std::path::Path) -> Option<Vec<u8>> {
+    std::fs::read(path).ok()
 }
 
 fn launcher_repository() -> Repository {

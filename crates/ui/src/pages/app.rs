@@ -1,4 +1,4 @@
-use egui::{Align2, Rect, Sense, Shape, Stroke, Ui, pos2, vec2};
+use egui::{Align2, Rect, Sense, Shape, Stroke, Ui, Vec2, pos2, vec2};
 use tgow_core::catalog::{App, ReleaseState};
 use tgow_core::manifest::Manifest;
 use tgow_core::select::{self, Choice, Preference, Reason, Rejection};
@@ -91,34 +91,44 @@ fn hero(
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(vec2(width, HERO), Sense::hover());
     let painter = ui.painter_at(rect);
-    painter.add(Shape::mesh(shape::rect_gradient(
+    painter.add(Shape::mesh(shape::shade(
         rect,
         accent.gamma_multiply(0.20),
-        theme::BG_DEEP.gamma_multiply(0.0),
-        shape::Direction::Right,
+        1.0,
+        0.45,
     )));
-    let mark = Rect::from_center_size(
-        pos2(rect.right() - HERO * 0.55, rect.center().y + 10.0),
-        vec2(HERO * 1.1, HERO * 1.1),
-    );
-    painter.add(Shape::convex_polygon(
-        shape::normform(mark, mark.width() * brand::CHAMFER),
-        accent.gamma_multiply(0.05),
-        Stroke::new(1.5, accent.gamma_multiply(0.25)),
-    ));
-    painter.text(
-        mark.center(),
-        Align2::CENTER_CENTER,
-        initial(app.title()),
-        Font::Display.id(170.0),
-        accent.gamma_multiply(0.18),
-    );
-    painter.add(Shape::mesh(shape::rect_gradient(
-        Rect::from_min_max(pos2(rect.left(), rect.bottom() - 120.0), rect.max),
-        theme::BG_DEEP.gamma_multiply(0.0),
-        theme::BG.gamma_multiply(0.85),
-        shape::Direction::Down,
-    )));
+    let hero_image = view
+        .artwork
+        .get(&app.id)
+        .and_then(|artwork| artwork.hero.as_ref());
+    if let Some(hero) = hero_image {
+        let uv = shape::cover_uv(hero.size_vec2(), rect.size());
+        painter.add(Shape::mesh(shape::faded_image(rect, uv, hero.id(), 0.55)));
+        painter.add(Shape::mesh(shape::shade(
+            rect,
+            theme::BG.gamma_multiply(0.92),
+            0.6,
+            0.6,
+        )));
+    }
+    if hero_image.is_none() {
+        let mark = Rect::from_center_size(
+            pos2(rect.right() - HERO * 0.55, rect.center().y),
+            Vec2::splat(HERO * 0.82),
+        );
+        painter.add(Shape::convex_polygon(
+            shape::normform(mark, mark.width() * brand::CHAMFER),
+            accent.gamma_multiply(0.05),
+            Stroke::new(1.5, accent.gamma_multiply(0.25)),
+        ));
+        painter.text(
+            mark.center(),
+            Align2::CENTER_CENTER,
+            initial(app.title()),
+            Font::Display.id(132.0),
+            accent.gamma_multiply(0.18),
+        );
+    }
     let mut inner = ui.new_child(
         egui::UiBuilder::new()
             .max_rect(rect.shrink2(vec2(40.0, 36.0)))
