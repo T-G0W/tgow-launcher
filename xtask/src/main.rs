@@ -32,7 +32,7 @@ Commands:
   audit-binary <file>  Reject home directory paths and email addresses in a build
   dist                 Build the release binary without local paths and audit it
   licenses [--check]   Write or verify the third-party license files
-  icons                Render assets/brand/tgow-launcher.ico from the logo geometry
+  icons                Render the icon and the logo images from the logo geometry
   precommit            Run the fast checks and the license check for the pre-commit hook
   install-hooks        Install the local pre-commit hook
 ";

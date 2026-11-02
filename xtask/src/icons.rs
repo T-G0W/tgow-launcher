@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use crate::error::Error;
@@ -6,6 +7,10 @@ use crate::report::Finding;
 
 const SIZES: [u32; 7] = [16, 24, 32, 48, 64, 128, 256];
 pub(crate) const TARGET: &str = "assets/brand/tgow-launcher.ico";
+const LOGOS: [(u32, &str); 2] = [
+    (512, "assets/brand/logo-512.png"),
+    (128, "assets/brand/logo-128.png"),
+];
 
 pub(crate) fn write(root: &Path) -> Result<Vec<Finding>, Error> {
     let images: Vec<(u32, Vec<u8>)> = SIZES
@@ -13,6 +18,16 @@ pub(crate) fn write(root: &Path) -> Result<Vec<Finding>, Error> {
         .map(|&size| (size, bitmap(size, &tgow_ui::brand::icon_rgba(size))))
         .collect();
     fs::write(root.join(TARGET), encode(&images))?;
+    for (size, path) in LOGOS {
+        image::save_buffer(
+            root.join(path),
+            &tgow_ui::brand::icon_rgba(size),
+            size,
+            size,
+            image::ExtendedColorType::Rgba8,
+        )
+        .map_err(|error| Error::Io(io::Error::other(error)))?;
+    }
     Ok(Vec::new())
 }
 

@@ -11,6 +11,7 @@ publish.workspace = true
 [dependencies]
 ra-ap-rustc_lexer = "=0.179.0"
 serde_json.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
 tgow-ui.workspace = true
 
 [lints]
