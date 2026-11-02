@@ -120,6 +120,9 @@ pub enum Text {
     LastChecked,
     Never,
     Removed,
+    Details,
+    NotInstalled,
+    More,
 }
 
 impl Text {
@@ -301,6 +304,9 @@ impl Text {
             Self::LastChecked => ("Zuletzt geprüft", "Last checked"),
             Self::Never => ("Noch nie", "Never"),
             Self::Removed => ("Entfernt", "Removed"),
+            Self::Details => ("Details anzeigen", "Show details"),
+            Self::NotInstalled => ("Nicht installiert", "Not installed"),
+            Self::More => ("Weitere Aktionen", "More actions"),
         }
     }
 }

@@ -158,6 +158,61 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
     }
 }
 
+pub fn menu_item(ui: &mut Ui, icon: Icon, label: &str, danger: bool) -> Response {
+    let width = ui.available_width().max(200.0);
+    let (rect, response) = ui.allocate_exact_size(vec2(width, 34.0), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::MenuItem, true, label));
+    let hover = animate(
+        ui.ctx(),
+        response.id.with("hover"),
+        response.hovered(),
+        theme::FAST,
+    );
+    let painter = ui.painter();
+    if hover > 0.0 {
+        let fill = if danger {
+            theme::DANGER.gamma_multiply(0.18)
+        } else {
+            theme::SURFACE_3
+        };
+        shape::fill(
+            painter,
+            rect,
+            theme::RADIUS_S,
+            fill.gamma_multiply(hover),
+            Stroke::NONE,
+        );
+    }
+    let base = if danger {
+        theme::DANGER
+    } else {
+        theme::TEXT_MUTED
+    };
+    let color = base.lerp_to_gamma(if danger { theme::DANGER } else { theme::TEXT }, hover);
+    icons::paint(
+        painter,
+        Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(16.0)),
+        icon,
+        color,
+    );
+    let galley = painter.layout_job(job(label, Font::Body, 14.0, color));
+    painter.galley(
+        pos2(rect.left() + 38.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        color,
+    );
+    response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+pub fn menu_separator(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 9.0), Sense::hover());
+    ui.painter().hline(
+        rect.x_range(),
+        rect.center().y,
+        Stroke::new(1.0, theme::LINE.gamma_multiply(0.8)),
+    );
+}
+
 pub fn link(ui: &mut Ui, label: &str) -> Response {
     let galley = galley(ui, label, Font::Strong, 13.0, theme::ACCENT_SOFT);
     let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(4.0, 6.0), Sense::click());
@@ -220,6 +275,35 @@ pub fn ghost_button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
     );
     focus_ring(ui, &response, rect, theme::RADIUS_S);
     response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+pub fn square_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(side), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, tooltip));
+    let hover = animate(
+        ui.ctx(),
+        response.id.with("hover"),
+        response.hovered(),
+        theme::FAST,
+    );
+    let painter = ui.painter();
+    shape::fill(
+        painter,
+        rect,
+        theme::RADIUS_S,
+        theme::SURFACE_1.lerp_to_gamma(theme::SURFACE_2, hover),
+        Stroke::new(1.0, theme::LINE_STRONG.lerp_to_gamma(theme::ACCENT, hover)),
+    );
+    icons::paint(
+        painter,
+        rect.shrink(side * 0.3),
+        icon,
+        theme::TEXT_MUTED.lerp_to_gamma(theme::TEXT, hover),
+    );
+    focus_ring(ui, &response, rect, theme::RADIUS_S);
+    response
+        .on_hover_text(tooltip)
+        .on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Response {

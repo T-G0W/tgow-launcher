@@ -53,16 +53,32 @@ pub fn rounded(rect: Rect, radius: f32) -> Vec<Pos2> {
             FRAC_PI_2,
         ),
     ];
-    let steps = arc_steps(radius);
     corners
         .into_iter()
-        .flat_map(|(center, start)| {
-            (0..=steps).map(move |step| {
-                let angle = start + FRAC_PI_2 * f32::from(step) / f32::from(steps);
-                center + radius * vec2(angle.cos(), angle.sin())
-            })
-        })
+        .flat_map(|(center, start)| corner(center, radius, start))
         .collect()
+}
+
+#[must_use]
+pub fn rounded_top(rect: Rect, radius: f32) -> Vec<Pos2> {
+    let radius = radius.min(rect.width() / 2.0).min(rect.height() / 2.0);
+    let mut points: Vec<Pos2> =
+        corner(pos2(rect.left() + radius, rect.top() + radius), radius, PI).collect();
+    points.extend(corner(
+        pos2(rect.right() - radius, rect.top() + radius),
+        radius,
+        PI + FRAC_PI_2,
+    ));
+    points.extend([rect.right_bottom(), rect.left_bottom()]);
+    points
+}
+
+fn corner(center: Pos2, radius: f32, start: f32) -> impl Iterator<Item = Pos2> {
+    let steps = arc_steps(radius);
+    (0..=steps).map(move |step| {
+        let angle = start + FRAC_PI_2 * f32::from(step) / f32::from(steps);
+        center + radius * vec2(angle.cos(), angle.sin())
+    })
 }
 
 fn arc_steps(radius: f32) -> u16 {

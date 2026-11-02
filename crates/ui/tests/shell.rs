@@ -214,3 +214,23 @@ fn title_bar_opens_and_closes_the_popovers() {
     harness.run();
     assert_eq!(harness.state().shell.page, Page::Downloads);
 }
+
+#[test]
+fn right_click_on_a_card_opens_its_menu() {
+    let mut harness = harness(&["ferrovox"]);
+    let title = harness.state().apps[0].title().to_owned();
+    harness
+        .get_by_label_contains(&format!("{title}, "))
+        .click_secondary();
+    harness.run();
+    assert!(
+        harness
+            .query_by_role_and_label(Role::MenuItem, "Auf GitHub ansehen")
+            .is_some()
+    );
+    harness
+        .get_by_role_and_label(Role::MenuItem, "Details anzeigen")
+        .click();
+    harness.run();
+    assert_eq!(harness.state().shell.page, Page::App("ferrovox".to_owned()));
+}

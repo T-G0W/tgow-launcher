@@ -1,7 +1,10 @@
-use egui::{Align2, Rect, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2, vec2};
+use egui::{
+    Align2, Color32, CornerRadius, Rect, Response, Role, Sense, Shape, Stroke, StrokeKind, Ui,
+    Vec2, WidgetInfo, pos2, vec2,
+};
 use tgow_core::catalog::{App, ReleaseState};
 
-use super::{accent_of, initial, paint_chip};
+use super::{MenuChoice, accent_of, app_menu, initial, paint_chip, paint_icon};
 use crate::icons::Icon;
 use crate::shell::{CatalogStatus, Effect, Page, Phase, Shell, View, padded};
 use crate::text::Text;
@@ -10,7 +13,8 @@ use crate::widgets::{self, Emphasis, animate};
 use crate::{icons, shape};
 
 const CARD_MIN_WIDTH: f32 = 300.0;
-const CARD_HEIGHT: f32 = 214.0;
+const CARD_HEIGHT: f32 = 252.0;
+const BANNER: f32 = 158.0;
 const GAP: f32 = 20.0;
 const ROW_HEIGHT: f32 = 68.0;
 const ROW_GAP: f32 = 10.0;
@@ -109,8 +113,8 @@ pub(crate) fn show(
             return;
         }
         let opened = match shell.library.arrangement {
-            Arrangement::Grid => grid(ui, &apps, view),
-            Arrangement::List => list(ui, &apps, view),
+            Arrangement::Grid => grid(ui, &apps, view, effects),
+            Arrangement::List => list(ui, &apps, view, effects),
         };
         if let Some(app) = opened {
             shell.open(Page::App(app.id.clone()));
@@ -153,7 +157,12 @@ fn controls(ui: &mut Ui, state: &mut State, view: &View<'_>, discover: bool) {
     });
 }
 
-fn grid<'a>(ui: &mut Ui, apps: &[&'a App], view: &View<'_>) -> Option<&'a App> {
+fn grid<'a>(
+    ui: &mut Ui,
+    apps: &[&'a App],
+    view: &View<'_>,
+    effects: &mut Vec<Effect>,
+) -> Option<&'a App> {
     let available = ui.available_width();
     let columns = ((available + GAP) / (CARD_MIN_WIDTH + GAP))
         .floor()
@@ -165,7 +174,8 @@ fn grid<'a>(ui: &mut Ui, apps: &[&'a App], view: &View<'_>) -> Option<&'a App> {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = GAP;
             for app in row {
-                if card(ui, app, view, width).clicked() {
+                let response = card(ui, app, view, width);
+                if response.clicked() || menu(&response, app, view, effects) {
                     opened = Some(*app);
                 }
             }
@@ -175,15 +185,31 @@ fn grid<'a>(ui: &mut Ui, apps: &[&'a App], view: &View<'_>) -> Option<&'a App> {
     opened
 }
 
-fn list<'a>(ui: &mut Ui, apps: &[&'a App], view: &View<'_>) -> Option<&'a App> {
+fn list<'a>(
+    ui: &mut Ui,
+    apps: &[&'a App],
+    view: &View<'_>,
+    effects: &mut Vec<Effect>,
+) -> Option<&'a App> {
     let mut opened = None;
     for app in apps {
-        if row(ui, app, view).clicked() {
+        let response = row(ui, app, view);
+        if response.clicked() || menu(&response, app, view, effects) {
             opened = Some(*app);
         }
         ui.add_space(ROW_GAP - ui.spacing().item_spacing.y);
     }
     opened
+}
+
+fn menu(response: &Response, app: &App, view: &View<'_>, effects: &mut Vec<Effect>) -> bool {
+    let mut details = false;
+    response.context_menu(|ui| match app_menu(ui, app, view, true) {
+        Some(MenuChoice::Details) => details = true,
+        Some(MenuChoice::Do(effect)) => effects.push(effect),
+        None => {}
+    });
+    details
 }
 
 fn row(ui: &mut Ui, app: &App, view: &View<'_>) -> Response {
@@ -338,109 +364,151 @@ fn card(ui: &mut Ui, app: &App, view: &View<'_>, width: f32) -> Response {
         ui.ctx(),
         response.id.with("hover"),
         response.hovered(),
-        theme::FAST,
+        theme::NORMAL,
     );
     let accent = accent_of(app);
     let painter = ui.painter();
     if hover > 0.0 {
-        shape::glow(painter, rect, 12.0, accent.gamma_multiply(0.18 * hover), 28);
+        shape::glow(
+            painter,
+            rect,
+            theme::RADIUS,
+            accent.gamma_multiply(0.24 * hover),
+            28,
+        );
     }
-    let outline = shape::normform(rect, 12.0);
-    painter.add(egui::Shape::convex_polygon(
-        outline.clone(),
-        theme::GLASS,
-        Stroke::NONE,
-    ));
-    let band = Rect::from_min_size(rect.min, vec2(rect.width(), 86.0));
+    shape::fill(painter, rect, theme::RADIUS, theme::SURFACE_0, Stroke::NONE);
+    let banner = Rect::from_min_size(rect.min, vec2(rect.width(), BANNER));
     let artwork = view.artwork.get(&app.id);
-    if let Some(hero) = artwork.and_then(|artwork| artwork.hero.as_ref()) {
-        let uv = shape::cover_uv(hero.size_vec2(), band.size());
-        painter.add(egui::Shape::mesh(shape::textured_polygon(
-            &shape::normform(band, 12.0),
-            band,
-            uv,
-            hero.id(),
-            0.55 + 0.3 * hover,
-            0.0,
-        )));
-    }
-    painter.add(egui::Shape::mesh(shape::vertical_gradient(
-        &shape::normform(band, 12.0)[..],
-        accent.gamma_multiply(0.22 + 0.12 * hover),
-        accent.gamma_multiply(0.0),
-    )));
-    painter.add(egui::Shape::closed_line(
-        outline,
+    paint_banner(painter, app, view, banner, accent, hover);
+    painter.hline(
+        rect.x_range(),
+        banner.bottom(),
+        Stroke::new(1.0, theme::LINE.gamma_multiply(0.6)),
+    );
+    let bar = Rect::from_min_max(pos2(rect.left(), banner.bottom()), rect.max);
+    paint_info(painter, app, artwork, bar, (&label, color), accent);
+    painter.rect_stroke(
+        rect,
+        CornerRadius::same(shape::to_u8(theme::RADIUS)),
         Stroke::new(1.0, theme::LINE.lerp_to_gamma(accent, hover * 0.8)),
-    ));
-    let tile = Rect::from_min_size(rect.min + vec2(20.0, 22.0), Vec2::splat(54.0));
-    paint_icon(painter, app, artwork, tile, accent);
-    let name = painter.layout_job(widgets::job(app.title(), Font::Heading, 20.0, theme::TEXT));
-    painter.galley(
-        pos2(tile.right() + 16.0, tile.top() + 4.0),
-        name,
-        theme::TEXT,
+        StrokeKind::Inside,
     );
-    let version = app.manifest().map_or_else(
-        || app.tag.clone().unwrap_or_default(),
-        |manifest| format!("v{}", manifest.version),
-    );
-    painter.text(
-        pos2(tile.right() + 16.0, tile.top() + 34.0),
-        Align2::LEFT_TOP,
-        version,
-        Font::Mono.id(12.0),
-        theme::TEXT_FAINT,
-    );
-    let mut job = widgets::job(description(app, view), Font::Body, 13.5, theme::TEXT_MUTED);
-    job.wrap.max_width = rect.width() - 40.0;
-    job.wrap.max_rows = 2;
-    job.wrap.overflow_character = Some('…');
-    painter.galley(
-        pos2(rect.left() + 20.0, tile.bottom() + 18.0),
-        painter.layout_job(job),
-        theme::TEXT_MUTED,
-    );
-    paint_chip(
-        painter,
-        pos2(rect.left() + 20.0, rect.bottom() - 40.0),
-        &label,
-        color,
-    );
-    widgets::focus_ring(ui, &response, rect, 12.0);
+    widgets::focus_ring(ui, &response, rect, theme::RADIUS);
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-fn paint_icon(
+fn paint_banner(
+    painter: &egui::Painter,
+    app: &App,
+    view: &View<'_>,
+    banner: Rect,
+    accent: Color32,
+    hover: f32,
+) {
+    let outline = shape::rounded_top(banner, theme::RADIUS);
+    let artwork = view.artwork.get(&app.id);
+    if let Some(hero) = artwork.and_then(|artwork| artwork.hero.as_ref()) {
+        let uv = shape::cover_uv(hero.size_vec2(), banner.size());
+        painter.add(Shape::mesh(shape::textured_polygon(
+            &outline,
+            banner,
+            uv,
+            hero.id(),
+            1.0,
+            1.0,
+        )));
+    } else {
+        painter.add(Shape::mesh(shape::vertical_gradient(
+            &outline,
+            accent.gamma_multiply(0.3),
+            theme::SURFACE_1,
+        )));
+        painter.text(
+            banner.center(),
+            Align2::CENTER_CENTER,
+            initial(app.title()),
+            Font::Display.id(84.0),
+            accent.gamma_multiply(0.3),
+        );
+    }
+    painter.add(Shape::mesh(shape::vertical_gradient(
+        &outline,
+        Color32::TRANSPARENT,
+        theme::SURFACE_0.gamma_multiply(0.9),
+    )));
+    if hover > 0.01 {
+        painter.add(Shape::convex_polygon(
+            outline,
+            theme::BG.gamma_multiply(0.82 * hover),
+            Stroke::NONE,
+        ));
+        let mut job = widgets::job(
+            description(app, view),
+            Font::Body,
+            14.0,
+            theme::TEXT.gamma_multiply(hover),
+        );
+        job.wrap.max_width = banner.width() - 36.0;
+        job.wrap.max_rows = 4;
+        job.wrap.overflow_character = Some('\u{2026}');
+        painter.galley(
+            banner.min + vec2(18.0, 18.0),
+            painter.layout_job(job),
+            theme::TEXT,
+        );
+    }
+}
+
+fn paint_info(
     painter: &egui::Painter,
     app: &App,
     artwork: Option<&crate::shell::Artwork>,
-    tile: Rect,
-    accent: egui::Color32,
+    bar: Rect,
+    (label, color): (&str, Color32),
+    accent: Color32,
 ) {
-    shape::fill(
-        painter,
-        tile,
-        10.0,
-        theme::SURFACE_2,
-        Stroke::new(1.0, accent.gamma_multiply(0.7)),
+    let tile = Rect::from_min_size(
+        pos2(bar.left() + 16.0, bar.center().y - 24.0),
+        Vec2::splat(48.0),
     );
-    if let Some(icon) = artwork.and_then(|artwork| artwork.icon.as_ref()) {
-        painter.image(
-            icon.id(),
-            tile.shrink(7.0),
-            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-            egui::Color32::WHITE,
-        );
-    } else {
-        painter.text(
-            tile.center(),
-            Align2::CENTER_CENTER,
-            initial(app.title()),
-            Font::Display.id(28.0),
-            accent,
-        );
-    }
+    paint_icon(painter, app, artwork, tile, accent);
+    let chip = painter
+        .layout_job(widgets::job(label, Font::Label, 10.0, color))
+        .size()
+        .x
+        + 18.0;
+    let chip_left = bar.right() - 16.0 - chip;
+    paint_chip(
+        painter,
+        pos2(chip_left, bar.center().y - 10.0),
+        label,
+        color,
+    );
+    let text_left = tile.right() + 14.0;
+    let mut name = widgets::job(app.title(), Font::Heading, 18.0, theme::TEXT);
+    name.wrap.max_width = (chip_left - text_left - 10.0).max(40.0);
+    name.wrap.max_rows = 1;
+    name.wrap.overflow_character = Some('\u{2026}');
+    painter.galley(
+        pos2(text_left, tile.top() + 2.0),
+        painter.layout_job(name),
+        theme::TEXT,
+    );
+    painter.text(
+        pos2(text_left, tile.top() + 30.0),
+        Align2::LEFT_TOP,
+        version(app),
+        Font::Mono.id(12.0),
+        theme::TEXT_FAINT,
+    );
+}
+
+fn version(app: &App) -> String {
+    app.manifest().map_or_else(
+        || app.tag.clone().unwrap_or_default(),
+        |manifest| format!("v{}", manifest.version),
+    )
 }
 
 pub(crate) fn status(app: &App, view: &View<'_>) -> (String, egui::Color32) {
@@ -461,7 +529,7 @@ pub(crate) fn status(app: &App, view: &View<'_>) -> (String, egui::Color32) {
         };
     }
     let (text, color) = match app.release {
-        ReleaseState::Verified(_) => (Text::Signed, theme::ACCENT_SOFT),
+        ReleaseState::Verified(_) => (Text::NotInstalled, theme::TEXT_MUTED),
         ReleaseState::Unknown => (Text::CatalogLoading, theme::TEXT_FAINT),
         ReleaseState::NoRelease => (Text::NoRelease, theme::TEXT_FAINT),
         ReleaseState::Unsigned => (Text::NotSigned, theme::WARNING),

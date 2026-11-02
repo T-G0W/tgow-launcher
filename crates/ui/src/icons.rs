@@ -24,6 +24,9 @@ pub enum Icon {
     Collapse,
     Shield,
     Refresh,
+    Play,
+    Folder,
+    Trash,
 }
 
 #[expect(clippy::too_many_lines)]
@@ -133,6 +136,29 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             }
         }
         Icon::Check => line(&[at(-6.0, 0.5), at(-2.0, 4.5), at(6.5, -4.5)]),
+        Icon::Play => {
+            painter.add(Shape::convex_polygon(
+                vec![at(-4.5, -7.0), at(7.0, 0.0), at(-4.5, 7.0)],
+                color,
+                Stroke::NONE,
+            ));
+        }
+        Icon::Folder => line(&[
+            at(-8.0, -6.0),
+            at(-3.0, -6.0),
+            at(-1.0, -3.5),
+            at(8.0, -3.5),
+            at(8.0, 6.5),
+            at(-8.0, 6.5),
+            at(-8.0, -6.0),
+        ]),
+        Icon::Trash => {
+            line(&[at(-7.5, -5.0), at(7.5, -5.0)]);
+            line(&[at(-2.5, -5.0), at(-2.0, -7.5), at(2.0, -7.5), at(2.5, -5.0)]);
+            line(&[at(-5.5, -5.0), at(-4.5, 7.5), at(4.5, 7.5), at(5.5, -5.0)]);
+            line(&[at(-1.5, -1.5), at(-1.5, 4.5)]);
+            line(&[at(1.5, -1.5), at(1.5, 4.5)]);
+        }
         Icon::Expand => line(&[at(-2.5, -6.0), at(3.5, 0.0), at(-2.5, 6.0)]),
         Icon::Collapse => line(&[at(2.5, -6.0), at(-3.5, 0.0), at(2.5, 6.0)]),
         Icon::Shield => {

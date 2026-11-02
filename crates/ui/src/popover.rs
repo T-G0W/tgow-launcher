@@ -81,7 +81,10 @@ pub(crate) fn status(ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>) {
     row(ui, view.t(Text::Catalog), |ui| {
         widgets::text(
             ui,
-            &format!("{} Apps", view.apps.len()),
+            &match view.apps.len() {
+                1 => "1 App".to_owned(),
+                count => format!("{count} Apps"),
+            },
             Font::Mono,
             13.0,
             theme::TEXT,
