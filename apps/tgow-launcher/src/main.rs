@@ -131,14 +131,14 @@ fn viewport(settings: &Settings) -> ViewportBuilder {
         .with_title("T-GOW Launcher")
         .with_app_id(APP_ID)
         .with_decorations(false)
+        .with_maximize_button(false)
         .with_inner_size([1280.0, 760.0])
         .with_min_inner_size([1024.0, 640.0])
         .with_icon(Arc::new(icon));
     if let Some(window) = settings.window {
         viewport = viewport
             .with_position([window.x, window.y])
-            .with_inner_size([window.width, window.height])
-            .with_maximized(window.maximized);
+            .with_inner_size([window.width, window.height]);
     }
     viewport
 }

@@ -158,7 +158,6 @@ impl Launcher {
     fn remember_window(&mut self, ctx: &Context) {
         let geometry = ctx.input(|input| {
             let viewport = input.viewport();
-            let maximized = viewport.maximized.unwrap_or(false);
             let outer = viewport.outer_rect?;
             let inner = viewport.inner_rect?;
             Some(WindowGeometry {
@@ -166,17 +165,11 @@ impl Launcher {
                 y: outer.top(),
                 width: inner.width(),
                 height: inner.height(),
-                maximized,
+                maximized: false,
             })
         });
         if let Some(geometry) = geometry {
-            if geometry.maximized {
-                if let Some(window) = &mut self.settings.window {
-                    window.maximized = true;
-                }
-            } else {
-                self.settings.window = Some(geometry);
-            }
+            self.settings.window = Some(geometry);
         }
     }
 

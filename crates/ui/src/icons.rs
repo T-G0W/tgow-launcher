@@ -15,8 +15,7 @@ pub enum Icon {
     Globe,
     Code,
     Minimize,
-    Maximize,
-    Restore,
+    Back,
     Close,
     Search,
     More,
@@ -116,28 +115,9 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             line(&[at(1.5, -7.0), at(-1.5, 7.0)]);
         }
         Icon::Minimize => line(&[at(-5.0, 0.0), at(5.0, 0.0)]),
-        Icon::Maximize => {
-            painter.rect_stroke(
-                Rect::from_min_max(at(-5.0, -5.0), at(5.0, 5.0)),
-                0.0,
-                stroke,
-                egui::StrokeKind::Middle,
-            );
-        }
-        Icon::Restore => {
-            painter.rect_stroke(
-                Rect::from_min_max(at(-5.0, -3.0), at(3.0, 5.0)),
-                0.0,
-                stroke,
-                egui::StrokeKind::Middle,
-            );
-            line(&[
-                at(-3.0, -3.0),
-                at(-3.0, -5.0),
-                at(5.0, -5.0),
-                at(5.0, 3.0),
-                at(3.0, 3.0),
-            ]);
+        Icon::Back => {
+            line(&[at(7.0, 0.0), at(-6.0, 0.0)]);
+            line(&[at(-1.0, -5.0), at(-6.0, 0.0), at(-1.0, 5.0)]);
         }
         Icon::Close => {
             line(&[at(-5.0, -5.0), at(5.0, 5.0)]);

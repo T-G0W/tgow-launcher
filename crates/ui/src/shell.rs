@@ -249,11 +249,7 @@ impl Shell {
     fn title_bar(&mut self, ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>) {
         let rect = ui.max_rect();
         let drag = ui.interact(rect, ui.scope_id().with("drag"), Sense::click_and_drag());
-        let maximized = ui.input(|input| input.viewport().maximized.unwrap_or(false));
-        if drag.double_clicked() {
-            ui.ctx()
-                .send_viewport_cmd(ViewportCommand::Maximized(!maximized));
-        } else if drag.drag_started() {
+        if drag.drag_started() {
             ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
         }
         let painter = ui.painter();
@@ -282,15 +278,6 @@ impl Shell {
                 ui.spacing_mut().item_spacing.x = 0.0;
                 if widgets::window_button(ui, Icon::Close, view.t(Text::Close), true).clicked() {
                     ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-                }
-                let (icon, label) = if maximized {
-                    (Icon::Restore, Text::Restore)
-                } else {
-                    (Icon::Maximize, Text::Maximize)
-                };
-                if widgets::window_button(ui, icon, view.t(label), false).clicked() {
-                    ui.ctx()
-                        .send_viewport_cmd(ViewportCommand::Maximized(!maximized));
                 }
                 if widgets::window_button(ui, Icon::Minimize, view.t(Text::Minimize), false)
                     .clicked()
