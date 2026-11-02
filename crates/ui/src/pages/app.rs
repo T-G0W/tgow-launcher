@@ -2,7 +2,7 @@ use egui::{Align2, Rect, Sense, Shape, Stroke, Ui, Vec2, pos2, vec2};
 use tgow_core::catalog::{App, ReleaseState};
 use tgow_core::manifest::Manifest;
 use tgow_core::select::{self, Choice, Preference, Reason, Rejection};
-use tgow_core::settings::{Settings, UpdateMode};
+use tgow_core::settings::{Language, Settings, UpdateMode};
 
 use super::library::{phase_label, status};
 use super::{accent_of, initial};
@@ -217,7 +217,7 @@ fn meta(ui: &mut Ui, app: &App, view: &View<'_>, choice: Option<&Result<Choice<'
             theme::TEXT_MUTED,
         );
         widgets::chip(ui, asset.kind.label(), theme::TEXT_MUTED);
-        widgets::chip(ui, &megabytes(asset.size), theme::TEXT_MUTED);
+        widgets::chip(ui, &megabytes(asset.size, view.language), theme::TEXT_MUTED);
     }
 }
 
@@ -241,7 +241,7 @@ fn overview(
             .map(|choice| (Text::Package, describe(choice, view))),
         choice
             .and_then(|choice| choice.as_ref().ok())
-            .map(|choice| (Text::Size, megabytes(choice.asset.size))),
+            .map(|choice| (Text::Size, megabytes(choice.asset.size, view.language))),
     ]
     .into_iter()
     .flatten()
@@ -345,9 +345,13 @@ fn notes(ui: &mut Ui, app: &App, view: &View<'_>) {
     }
 }
 
-fn megabytes(bytes: u64) -> String {
+fn megabytes(bytes: u64, language: Language) -> String {
     let tenths = bytes.saturating_mul(10) / (1024 * 1024);
-    format!("{},{} MB", tenths / 10, tenths % 10)
+    let separator = match language {
+        Language::German => ',',
+        Language::English => '.',
+    };
+    format!("{}{separator}{} MB", tenths / 10, tenths % 10)
 }
 
 fn updates(
@@ -378,5 +382,18 @@ fn updates(
     if changed {
         settings.apps.entry(app.id.clone()).or_default().updates = Some(mode);
         effects.push(Effect::SettingsChanged);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tgow_core::settings::Language;
+
+    use super::megabytes;
+
+    #[test]
+    fn writes_sizes_with_the_decimal_separator_of_the_language() {
+        assert_eq!(megabytes(6_675_488, Language::German), "6,3 MB");
+        assert_eq!(megabytes(6_675_488, Language::English), "6.3 MB");
     }
 }
