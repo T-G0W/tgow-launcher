@@ -5,7 +5,7 @@ use tgow_core::select::{self, Choice, Preference, Reason, Rejection};
 use tgow_core::settings::{Language, Settings, UpdateMode};
 
 use super::library::{phase_label, status};
-use super::{accent_of, initial};
+use super::{MenuChoice, accent_of, app_menu, initial, paint_icon};
 use crate::icons::Icon;
 use crate::shell::{Effect, Page, Phase, Shell, View};
 use crate::text::Text;
@@ -13,7 +13,7 @@ use crate::theme::{self, Font};
 use crate::widgets::{self, Emphasis};
 use crate::{brand, shape};
 
-const HERO: f32 = 340.0;
+const HERO: f32 = 380.0;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Tab {
@@ -66,12 +66,28 @@ pub(crate) fn show(
                         ],
                     );
                     ui.add_space(theme::M);
-                    widgets::panel(ui, 16.0, |ui| {
+                    widgets::panel(ui, theme::RADIUS, |ui| {
                         ui.set_width(ui.available_width());
                         match shell.detail.tab {
                             Tab::Overview => {
-                                overview(ui, app, view, choice.as_ref(), effects);
-                                updates(ui, app, view, settings, effects);
+                                let banner = view
+                                    .artwork
+                                    .get(&app.id)
+                                    .and_then(|artwork| artwork.hero.as_ref());
+                                let total = ui.available_width();
+                                ui.horizontal_top(|ui| {
+                                    ui.vertical(|ui| {
+                                        if banner.is_some() {
+                                            ui.set_width(total * 0.5);
+                                        }
+                                        overview(ui, app, view, choice.as_ref(), effects);
+                                        updates(ui, app, view, settings, effects);
+                                    });
+                                    if let Some(banner) = banner {
+                                        ui.add_space(theme::L);
+                                        screenshot(ui, banner);
+                                    }
+                                });
                             }
                             Tab::Notes => notes(ui, app, view),
                         }
@@ -104,12 +120,19 @@ fn hero(
         .and_then(|artwork| artwork.hero.as_ref());
     if let Some(hero) = hero_image {
         let uv = shape::cover_uv(hero.size_vec2(), rect.size());
-        painter.add(Shape::mesh(shape::faded_image(rect, uv, hero.id(), 0.55)));
+        painter.add(Shape::mesh(shape::faded_image(rect, uv, hero.id(), 0.45)));
+        painter.rect_filled(rect, 0.0, theme::BG.gamma_multiply(0.45));
+        painter.add(Shape::mesh(shape::rect_gradient(
+            rect,
+            theme::BG.gamma_multiply(0.96),
+            theme::BG.gamma_multiply(0.15),
+            shape::Direction::Right,
+        )));
         painter.add(Shape::mesh(shape::shade(
             rect,
-            theme::BG.gamma_multiply(0.92),
-            0.6,
-            0.6,
+            theme::BG.gamma_multiply(0.95),
+            0.55,
+            0.45,
         )));
     }
     if hero_image.is_none() {
@@ -137,28 +160,62 @@ fn hero(
     if widgets::ghost_button(&mut top, Icon::Back, view.t(Text::Back)).clicked() {
         effects.push(Effect::Back);
     }
-    let mut inner = ui.new_child(
-        egui::UiBuilder::new()
-            .max_rect(rect.shrink2(vec2(40.0, 36.0)))
-            .layout(egui::Layout::bottom_up(egui::Align::Min)),
-    );
+    let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_max(
+        pos2(rect.left() + 40.0, rect.top() + 84.0),
+        pos2(rect.right() - 40.0, rect.bottom() - 24.0),
+    )));
     inner.horizontal(|ui| {
-        action(ui, app, view, choice, effects);
-        if widgets::button(ui, view.t(Text::OpenOnGitHub), Emphasis::Secondary, true).clicked() {
-            effects.push(Effect::Open(app.html_url.clone()));
-        }
+        let (tile, _) = ui.allocate_exact_size(Vec2::splat(68.0), Sense::hover());
+        paint_icon(ui.painter(), app, view.artwork.get(&app.id), tile, accent);
+        ui.add_space(theme::M);
+        widgets::text(ui, app.title(), Font::Display, 52.0, theme::TEXT);
     });
-    inner.add_space(theme::M);
-    inner.horizontal(|ui| meta(ui, app, view, choice));
     inner.add_space(theme::S);
     if let Some(tagline) = app
         .manifest()
         .and_then(|manifest| manifest.tagline.get(view.language))
         .or(app.description.as_deref())
     {
-        widgets::text(&mut inner, tagline, Font::Body, 17.0, theme::TEXT_MUTED);
+        let mut job = widgets::job(tagline, Font::Body, 17.0, theme::TEXT_MUTED);
+        job.wrap.max_width = (inner.available_width() * 0.62).max(320.0);
+        job.wrap.max_rows = 2;
+        job.wrap.overflow_character = Some('…');
+        inner.label(job);
     }
-    widgets::text(&mut inner, app.title(), Font::Display, 54.0, theme::TEXT);
+    inner.add_space(theme::S);
+    inner.horizontal(|ui| meta(ui, app, view, choice));
+    inner.add_space(theme::M);
+    inner.horizontal(|ui| {
+        action(ui, app, view, choice, effects);
+        let more = widgets::square_button(ui, Icon::More, view.t(Text::More), 48.0);
+        egui::Popup::menu(&more).show(|ui| {
+            if let Some(MenuChoice::Do(effect)) = app_menu(ui, app, view, false) {
+                effects.push(effect);
+            }
+        });
+    });
+}
+
+fn screenshot(ui: &mut Ui, banner: &egui::TextureHandle) {
+    let width = ui.available_width();
+    let size = banner.size_vec2();
+    let height = (width * size.y / size.x.max(1.0)).clamp(120.0, 380.0);
+    let (rect, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
+    let uv = shape::cover_uv(size, rect.size());
+    ui.painter().add(Shape::mesh(shape::textured_polygon(
+        &shape::rounded(rect, theme::RADIUS),
+        rect,
+        uv,
+        banner.id(),
+        1.0,
+        1.0,
+    )));
+    ui.painter().rect_stroke(
+        rect,
+        egui::CornerRadius::same(shape::to_u8(theme::RADIUS)),
+        Stroke::new(1.0, theme::LINE),
+        egui::StrokeKind::Inside,
+    );
 }
 
 fn action(
