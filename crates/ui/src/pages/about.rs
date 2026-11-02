@@ -40,7 +40,10 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mu
             });
             ui.add_space(theme::L);
             ui.horizontal_wrapped(|ui| {
-                let mut any_link = false;
+                if Destination::main_discord().is_none() {
+                    let _ =
+                        widgets::button(ui, view.t(Text::DiscordSoon), Emphasis::Secondary, false);
+                }
                 for (destination, label) in [
                     (Destination::DiscordCommunity, Text::DiscordCommunity),
                     (Destination::DiscordEditingHub, Text::DiscordEditingHub),
@@ -52,20 +55,9 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mu
                     let Some(url) = destination.url() else {
                         continue;
                     };
-                    any_link |= destination.is_discord() || destination == Destination::Website;
                     if widgets::button(ui, view.t(label), Emphasis::Secondary, true).clicked() {
                         effects.push(Effect::Open(url.to_owned()));
                     }
-                }
-                if !any_link {
-                    ui.add_space(theme::S);
-                    widgets::text(
-                        ui,
-                        view.t(Text::LinksPending),
-                        Font::Body,
-                        13.0,
-                        theme::TEXT_FAINT,
-                    );
                 }
             });
             ui.add_space(theme::L);

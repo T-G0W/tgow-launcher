@@ -87,7 +87,7 @@ pub enum Text {
     Build,
     CopySystemInfo,
     Copied,
-    LinksPending,
+    DiscordSoon,
     Launch,
     Update,
     Uninstall,
@@ -270,10 +270,7 @@ impl Text {
             Self::SortNewest => ("Neueste", "Newest"),
             Self::ArrangeGrid => ("Raster", "Grid"),
             Self::ArrangeList => ("Liste", "List"),
-            Self::LinksPending => (
-                "Discord und Website folgen.",
-                "Discord and website coming soon.",
-            ),
+            Self::DiscordSoon => ("Discord kommt bald", "Discord coming soon"),
         }
     }
 }

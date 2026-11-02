@@ -1,6 +1,6 @@
 pub const GITHUB_PROFILE: &str = "https://github.com/T-G0W";
 pub const REPOSITORY: &str = "https://github.com/T-G0W/tgow-launcher";
-pub const WEBSITE: &str = "";
+pub const WEBSITE: &str = "https://t-gow.com";
 pub const DISCORD_COMMUNITY: &str = "";
 pub const DISCORD_EDITING_HUB: &str = "";
 pub const DISCORD_SERVICES: &str = "";
