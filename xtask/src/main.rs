@@ -33,7 +33,7 @@ Commands:
   dist                 Build the release binary without local paths and audit it
   licenses [--check]   Write or verify the third-party license files
   icons                Render assets/brand/tgow-launcher.ico from the logo geometry
-  precommit            Run the fast checks for the pre-commit hook
+  precommit            Run the fast checks and the license check for the pre-commit hook
   install-hooks        Install the local pre-commit hook
 ";
 
@@ -110,6 +110,7 @@ fn precommit(repo: &Repo) -> Result<Vec<Finding>, Error> {
     findings.extend(names::check(&files));
     let paths: Vec<String> = files.into_iter().map(|file| file.path).collect();
     findings.extend(aifiles::check(&paths));
+    findings.extend(licenses::run(repo, true)?);
     Ok(findings)
 }
 
