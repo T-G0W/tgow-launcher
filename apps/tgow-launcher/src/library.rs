@@ -158,6 +158,9 @@ impl Library {
     }
 
     pub(crate) fn install(&mut self, app: &App, platform: &Platform, settings: &Settings) {
+        if self.phases.contains_key(&app.id) {
+            return;
+        }
         let Some(order) = self.order(app, platform, settings) else {
             return;
         };
@@ -170,6 +173,9 @@ impl Library {
     }
 
     pub(crate) fn uninstall(&mut self, app: &str) {
+        if self.phases.contains_key(app) {
+            return;
+        }
         let (Some(installation), Some(jobs)) = (self.installed.get(app).cloned(), &mut self.jobs)
         else {
             return;

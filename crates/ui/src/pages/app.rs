@@ -262,8 +262,9 @@ fn overview(
             if widgets::button(ui, view.t(Text::ShowFolder), Emphasis::Secondary, true).clicked() {
                 effects.push(Effect::Reveal(app.id.clone()));
             }
+            let idle = !view.jobs.contains_key(&app.id);
             if installation.removal.is_some()
-                && widgets::button(ui, view.t(Text::Uninstall), Emphasis::Danger, true).clicked()
+                && widgets::button(ui, view.t(Text::Uninstall), Emphasis::Danger, idle).clicked()
             {
                 effects.push(Effect::Uninstall(app.id.clone()));
             }
