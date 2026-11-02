@@ -124,6 +124,7 @@ pub enum Text {
     NotInstalled,
     More,
     SplashStarting,
+    DownloadsQueueEmpty,
     SplashChecking,
     SplashDownloading,
     SplashInstalling,
@@ -315,6 +316,10 @@ impl Text {
             Self::NotInstalled => ("Nicht installiert", "Not installed"),
             Self::More => ("Weitere Aktionen", "More actions"),
             Self::SplashStarting => ("Wird gestartet", "Starting"),
+            Self::DownloadsQueueEmpty => (
+                "Es ist nichts in der Warteschlange.",
+                "There is nothing in the queue.",
+            ),
             Self::SplashChecking => ("Suche nach Updates", "Checking for updates"),
             Self::SplashDownloading => ("Update wird geladen", "Downloading update"),
             Self::SplashInstalling => ("Update wird installiert", "Installing update"),

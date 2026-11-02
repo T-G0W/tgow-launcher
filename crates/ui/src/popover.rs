@@ -36,14 +36,39 @@ pub(crate) fn downloads(ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>)
         .filter(|(_, phase)| matches!(phase, Phase::Waiting))
         .collect();
     if ongoing.is_empty() && waiting.is_empty() && view.recent.is_empty() {
+        ui.add_space(theme::M);
+        ui.vertical_centered(|ui| {
+            let (rect, _) = ui.allocate_exact_size(Vec2::splat(44.0), Sense::hover());
+            shape::fill(
+                ui.painter(),
+                rect,
+                theme::RADIUS,
+                theme::SURFACE_2,
+                Stroke::new(1.0, theme::LINE),
+            );
+            crate::icons::paint(
+                ui.painter(),
+                rect.shrink(12.0),
+                Icon::Downloads,
+                theme::ACCENT_SOFT,
+            );
+            ui.add_space(theme::S);
+            widgets::text(
+                ui,
+                view.t(Text::DownloadsEmptyTitle),
+                Font::Strong,
+                14.0,
+                theme::TEXT,
+            );
+            widgets::text(
+                ui,
+                view.t(Text::DownloadsQueueEmpty),
+                Font::Body,
+                13.0,
+                theme::TEXT_FAINT,
+            );
+        });
         ui.add_space(theme::S);
-        widgets::text(
-            ui,
-            view.t(Text::DownloadsEmptyTitle),
-            Font::Body,
-            14.0,
-            theme::TEXT_MUTED,
-        );
         return open;
     }
     for (title, jobs) in [(Text::Ongoing, &ongoing), (Text::UpNext, &waiting)] {
