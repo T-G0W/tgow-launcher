@@ -15,3 +15,10 @@
 - OpenGL renderer first, wgpu as fallback
 - List of all bundled open-source crates with their licenses
 - T-GOW Launcher License: free to use, not to sell, change or pass on
+- Loading window that checks for updates and installs a launcher update before the main window opens
+- Cards with a screenshot banner, the description on hover and the install state always visible
+- Context menus on cards and list rows, a menu next to the main action on app pages
+- Popups for downloads and status under the title bar
+- Back navigation from the title bar, Alt+Left and the mouse
+- Slightly rounded controls, no maximizing, animations on by default
+- Logo and screenshot of an app from its repository when the release brings none

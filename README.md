@@ -29,7 +29,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/tgow-launcher-library.png" alt="T-GOW Launcher library: cards for Ferrovox, marked as installed, and NeoCross, marked as having no signed release, with search, filters for all, installed and updates, sorting and a grid or list switch" width="100%">
+  <img src="docs/images/tgow-launcher-library.png" alt="T-GOW Launcher library: a card for Ferrovox with a screenshot banner, its logo, version 1.0.2 and the state installed, with search, filters for all, installed and updates, sorting and a grid or list switch" width="100%">
   <br>
   <sub>The library with every T-GOW project, its version and its state: installed, update available, signed or not.</sub>
 </p>
@@ -81,22 +81,42 @@ Every screenshot is the real app, captured from a build of this repository.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/tgow-launcher-app.png" alt="The Ferrovox page: name, tagline, chips for installed, v1.0.2, Windows x64, Inno Setup and 6.3 MB, Launch and View on GitHub buttons, detected system Windows 11 x64, package details, Show in folder and Uninstall, and the update mode for this app" width="100%">
+      <img src="docs/images/tgow-launcher-app.png" alt="The Ferrovox page: logo and name, the tagline, chips for installed, v1.0.2, Windows x64, Inno Setup and 6.3 MB, a Launch button with a menu next to it, and below the details with the detected system, the package and a screenshot of Ferrovox" width="100%">
       <br>
-      <sub>An app page with the detected system, the chosen package and its update mode.</sub>
+      <sub>An app page with logo, install state, the package picked for your system and a screenshot.</sub>
       <h3>One page per app</h3>
-      Each app gets a page with its tagline, release notes, the package picked for your system and its size. Launch, update, show the folder or uninstall from here.
+      Each app gets a page with its logo, tagline, release notes, the package picked for your system and a screenshot. Launch, update, show the folder or uninstall from here or from the menu next to the main button.
       <br><br>
       Apps that were installed before the launcher existed are found through their uninstall entry, so nothing has to be installed twice.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/tgow-launcher-welcome.png" alt="The welcome page with the launcher logo, the text Install the launcher for your user, and the buttons Install and Run without installing" width="100%">
+      <img src="docs/images/tgow-launcher-splash.png" alt="The loading window with the launcher logo, the name T-GOW LAUNCHER, the text Checking for updates and a progress bar" width="100%">
       <br>
-      <sub>First start: install for your user or run it portable.</sub>
-      <h3>Installs without asking for admin</h3>
-      On first start the launcher offers to install itself into your user profile with a Start menu entry and an uninstall entry, or to run as it is.
+      <sub>The loading window checks GitHub before the launcher opens.</sub>
+      <h3>Up to date before it opens</h3>
+      It starts with a small loading window that checks GitHub. A new launcher version is downloaded, verified and installed right there, and the launcher restarts into it.
       <br><br>
-      Apps install the same way: portable builds and archives into versioned folders, Inno Setup, NSIS and MSI silently per user, AppImage, tar.gz and Flatpak on Linux.
+      App updates install on their own in the background as soon as an app is closed.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/tgow-launcher-menu.png" alt="A right click on the Ferrovox card opens a menu with Show details, Launch, Show in folder, View on GitHub and Uninstall" width="100%">
+      <br>
+      <sub>A right click on a card or a list row opens everything you can do with an app.</sub>
+      <h3>Everything one click away</h3>
+      Cards show the screenshot of each app as banner, with logo, name, version and install state always visible. Hovering fades the description in.
+      <br><br>
+      A right click opens details, launch or install, update, the folder, GitHub and uninstall.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/tgow-launcher-status.png" alt="The status popup under the title bar: GitHub operational, catalog 1 app, T-GOW Launcher v0.1.0 up to date, last checked just now and a Check now button" width="100%">
+      <br>
+      <sub>Status and downloads open as popups right under the title bar.</sub>
+      <h3>Status and downloads at a glance</h3>
+      The status dot shows whether GitHub is reachable, how many apps are in the catalog, whether the launcher is up to date and when it last checked.
+      <br><br>
+      The downloads button shows a badge while something runs and opens ongoing, waiting and finished jobs with progress and cancel.
     </td>
   </tr>
   <tr>
@@ -110,13 +130,13 @@ Every screenshot is the real app, captured from a build of this repository.
       Several downloads run at once while installers run one after another, and an interrupted download picks up where it stopped.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/tgow-launcher-list.png" alt="The library as a list: one row per app with icon, name, version, description and state" width="100%">
+      <img src="docs/images/tgow-launcher-list.png" alt="The library as a list: one row per app with logo, name, version, description and install state" width="100%">
       <br>
       <sub>The library as a list, sorted by name or by newest release.</sub>
       <h3>Find things fast</h3>
       Search, filter by installed apps or available updates, sort by name or newest release, and switch between grid and list.
       <br><br>
-      Ctrl+F searches, F5 checks now, Ctrl+J opens downloads and Ctrl+, the settings. Every control has a name and a focus ring for screen readers and the keyboard.
+      Ctrl+F searches, F5 checks now, Ctrl+J opens downloads, Ctrl+, the settings, and Alt+Left or the back button of the mouse goes back. Every control has a name and a focus ring for screen readers and the keyboard.
     </td>
   </tr>
   <tr>
@@ -128,11 +148,11 @@ Every screenshot is the real app, captured from a build of this repository.
       The news page lines up the latest release of every app with its notes, in German or English, depending on your language.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/tgow-launcher-about.png" alt="The About page with the logo, version, GitHub and source code buttons, the privacy promise, the license and the lists of fonts and open-source components" width="100%">
+      <img src="docs/images/tgow-launcher-about.png" alt="The About page with the logo, version, a disabled Discord coming soon button, Website, GitHub and Source code buttons, the privacy promise, the license and the lists of fonts and open-source components" width="100%">
       <br>
-      <sub>About: version, privacy promise and every bundled open-source component.</sub>
+      <sub>About: version, links, privacy promise and every bundled open-source component.</sub>
       <h3>Nothing hidden</h3>
-      The About page lists all 345 crates the launcher is built from, with their licenses, and copies your system info for bug reports in one click.
+      The About page links the website and GitHub, lists all crates the launcher is built from with their licenses, and copies your system info for bug reports in one click.
     </td>
   </tr>
 </table>
@@ -144,7 +164,8 @@ Every screenshot is the real app, captured from a build of this repository.
 - **Installing:** per user and without administrator rights; portable builds, ZIP, tar.gz, AppImage, Inno Setup, NSIS, MSI and Flatpak; archives are checked for paths that leave the target folder.
 - **Updates:** automatic by default, per app automatic, notify only or off; the launcher updates itself and rolls back after two failed starts.
 - **Downloads:** several at once, resumable, cancellable, checked against size and SHA-256 before anything runs.
-- **Everyday comfort:** system tray, start with the system, single instance, `tgow://` links that open an app page, German and English, reduced motion.
+- **Interface:** slightly rounded controls, a loading window, popups for status and downloads, context menus, back navigation, animations that can be switched off.
+- **Everyday comfort:** system tray, start with the system, single instance, `tgow://` links that open an app page, German and English.
 
 <br>
 
