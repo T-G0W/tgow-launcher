@@ -354,15 +354,7 @@ impl Shell {
             Page::Library => pages::library::show(self, ui, view, false, effects),
             Page::Discover => pages::library::show(self, ui, view, true, effects),
             Page::Downloads => pages::downloads::show(ui, view, effects),
-            Page::News => padded(ui, |ui| {
-                widgets::heading(ui, view.t(Text::News), None);
-                widgets::empty_state(
-                    ui,
-                    Icon::News,
-                    view.t(Text::NewsEmptyTitle),
-                    view.t(Text::NewsEmptyBody),
-                );
-            }),
+            Page::News => pages::news::show(self, ui, view),
             Page::Settings => pages::settings::show(self, ui, view, settings, effects),
             Page::About => pages::about::show(self, ui, view, effects),
             Page::Welcome => pages::welcome::show(ui, view, effects),

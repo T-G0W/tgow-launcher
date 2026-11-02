@@ -2,6 +2,7 @@ pub(crate) mod about;
 pub(crate) mod app;
 pub(crate) mod downloads;
 pub(crate) mod library;
+pub(crate) mod news;
 pub(crate) mod settings;
 pub(crate) mod welcome;
 
