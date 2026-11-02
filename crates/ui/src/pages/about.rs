@@ -1,5 +1,5 @@
-use egui::{Rect, Sense, Ui, Vec2};
-use tgow_core::links::Destination;
+use egui::{Align2, Rect, Sense, Ui, Vec2, pos2, vec2};
+use tgow_core::links::{self, Destination};
 
 use crate::brand;
 use crate::shell::{Effect, Shell, View, padded};
@@ -8,6 +8,9 @@ use crate::theme::{self, FONT_LICENSES, Font};
 use crate::widgets::{self, Emphasis};
 
 const COPIED_SECONDS: f64 = 2.0;
+const DEPENDENCIES: &str = include_str!("../../../../assets/licenses/dependencies.txt");
+const LICENSE_FILE: &str = "THIRD-PARTY-LICENSES.txt";
+const ROW: f32 = 20.0;
 
 pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>) {
     padded(ui, |ui| {
@@ -85,10 +88,51 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mu
                         widgets::text(ui, first, Font::Mono, 11.0, theme::TEXT_FAINT);
                     }
                 });
+            components(ui, view, effects);
             ui.add_space(theme::M);
             footer(shell, ui, view, effects);
         });
     });
+}
+
+fn components(ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>) {
+    let count = DEPENDENCIES.lines().count();
+    egui::CollapsingHeader::new(format!("{} ({count})", view.t(Text::Components)))
+        .id_salt("components")
+        .show(ui, |ui| {
+            if widgets::button(ui, view.t(Text::LicenseTexts), Emphasis::Secondary, true).clicked()
+            {
+                effects.push(Effect::Open(format!(
+                    "{}/blob/v{}/{LICENSE_FILE}",
+                    links::REPOSITORY,
+                    view.version
+                )));
+            }
+            ui.add_space(theme::S);
+            egui::ScrollArea::vertical()
+                .max_height(260.0)
+                .auto_shrink([false, true])
+                .show_rows(ui, ROW, count, |ui, range| {
+                    for line in DEPENDENCIES.lines().skip(range.start).take(range.len()) {
+                        let (rect, _) =
+                            ui.allocate_exact_size(vec2(ui.available_width(), ROW), Sense::hover());
+                        let mut fields = line.split('\t');
+                        for (offset, font, color) in [
+                            (0.0, Font::Body, theme::TEXT),
+                            (250.0, Font::Mono, theme::TEXT_FAINT),
+                            (430.0, Font::Mono, theme::TEXT_MUTED),
+                        ] {
+                            ui.painter().text(
+                                pos2(rect.left() + offset, rect.center().y),
+                                Align2::LEFT_CENTER,
+                                fields.next().unwrap_or_default(),
+                                font.id(12.5),
+                                color,
+                            );
+                        }
+                    }
+                });
+        });
 }
 
 fn footer(shell: &mut Shell, ui: &mut Ui, view: &View<'_>, effects: &mut Vec<Effect>) {

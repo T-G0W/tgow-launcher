@@ -31,11 +31,12 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo xtask nocomments
 cargo test --workspace
+cargo xtask licenses --check
 cargo deny check
 ```
 
 ## License
 
-MIT or Apache-2.0, at your option. Fonts: Chakra Petch, Bai Jamjuree and JetBrains Mono under the SIL Open Font License 1.1.
+MIT or Apache-2.0, at your option. Fonts: Chakra Petch, Bai Jamjuree and JetBrains Mono under the SIL Open Font License 1.1. The licenses of all bundled crates are collected in `THIRD-PARTY-LICENSES.txt`, generated with `cargo xtask licenses`.
 
 Made by T-GOW · https://github.com/T-G0W

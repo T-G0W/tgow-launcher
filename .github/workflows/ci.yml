@@ -25,6 +25,7 @@ jobs:
       - run: cargo xtask names
       - run: cargo xtask aifiles
       - run: cargo xtask commits
+      - run: cargo xtask licenses --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   test-windows:

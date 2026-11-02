@@ -7,6 +7,7 @@ mod commits;
 mod dist;
 mod error;
 mod icons;
+mod licenses;
 mod names;
 mod repo;
 mod report;
@@ -30,6 +31,7 @@ Commands:
   commits [range]      Check commit messages, identity and time zone
   audit-binary <file>  Reject home directory paths and email addresses in a build
   dist                 Build the release binary without local paths and audit it
+  licenses [--check]   Write or verify the third-party license files
   icons                Render assets/brand/tgow-launcher.ico from the logo geometry
   precommit            Run the fast checks for the pre-commit hook
   install-hooks        Install the local pre-commit hook
@@ -74,6 +76,7 @@ fn dispatch(repo: &Repo, args: &[String]) -> Result<Vec<Finding>, Error> {
         "install-hooks" => install_hooks(repo),
         "icons" => icons::write(&repo.root),
         "dist" => dist::build(repo),
+        "licenses" => licenses::run(repo, rest.first().is_some_and(|flag| flag == "--check")),
         "audit-binary" => rest
             .first()
             .ok_or_else(|| Error::Usage(USAGE.to_owned()))
