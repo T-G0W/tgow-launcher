@@ -3,6 +3,7 @@ pub(crate) mod app;
 pub(crate) mod downloads;
 pub(crate) mod library;
 pub(crate) mod settings;
+pub(crate) mod welcome;
 
 use egui::{Color32, Painter, Pos2, Rect, Stroke, vec2};
 

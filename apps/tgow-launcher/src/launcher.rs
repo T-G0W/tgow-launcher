@@ -7,7 +7,7 @@ use tgow_core::deeplink::DeepLink;
 use tgow_core::platform::Platform;
 use tgow_core::settings::{Language, Settings, UpdateMode, WindowGeometry};
 use tgow_platform::paths::Paths;
-use tgow_platform::{integration, storage};
+use tgow_platform::{integration, setup, storage};
 use tgow_ui::shell::{CatalogStatus, Effect, Page, Shell, View};
 use tgow_ui::text::{self, Text};
 
@@ -100,6 +100,11 @@ impl Launcher {
             tray,
         };
         launcher.apply_autostart();
+        if let (Some(paths), Ok(executable)) = (&launcher.paths, std::env::current_exe())
+            && setup::needs_install(paths, &executable)
+        {
+            launcher.shell.page = Page::Welcome;
+        }
         launcher
     }
 
@@ -219,6 +224,32 @@ impl Launcher {
         }
     }
 
+    fn install_self(&mut self, ctx: &Context) {
+        let (Some(paths), Ok(executable)) = (&self.paths, std::env::current_exe()) else {
+            return;
+        };
+        match setup::install(paths, &executable, env!("CARGO_PKG_VERSION")) {
+            Ok(installed) => {
+                if tgow_platform::process::launch(
+                    &installed,
+                    &[update::AFTER_UPDATE_FLAG.to_owned()],
+                )
+                .is_ok()
+                {
+                    self.lifecycle = Lifecycle::Quitting;
+                    ctx.send_viewport_cmd(ViewportCommand::Close);
+                }
+            }
+            Err(error) => {
+                let now = ctx.input(|input| input.time);
+                self.shell.notify(
+                    format!("{} · {error}", Text::Failed.get(self.language())),
+                    now,
+                );
+            }
+        }
+    }
+
     fn restart(&mut self, ctx: &Context, hidden: bool) {
         let Ok(executable) = std::env::current_exe() else {
             return;
@@ -308,6 +339,8 @@ impl Launcher {
                 Effect::Uninstall(id) => self.library.uninstall(&id),
                 Effect::Reveal(id) => self.library.reveal(&id),
                 Effect::Cancel(id) => self.library.cancel(&id),
+                Effect::SkipInstall => self.shell.page = Page::Library,
+                Effect::InstallSelf => self.install_self(ctx),
             }
         }
     }

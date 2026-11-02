@@ -40,6 +40,15 @@ fn main() -> eframe::Result {
         std::thread::sleep(std::time::Duration::from_millis(1500));
     }
     let paths = Paths::locate();
+    if arguments
+        .iter()
+        .any(|argument| argument == tgow_platform::setup::UNINSTALL_FLAG)
+    {
+        if let Some(paths) = &paths {
+            let _ = tgow_platform::setup::uninstall(paths);
+        }
+        return Ok(());
+    }
     if let (Some(paths), Ok(executable)) = (&paths, std::env::current_exe())
         && update::Guard::new(&paths.data, &executable).on_start()
     {

@@ -26,6 +26,7 @@ pub enum Page {
     Settings,
     About,
     App(String),
+    Welcome,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +94,8 @@ pub enum Effect {
     Uninstall(String),
     Reveal(String),
     Cancel(String),
+    InstallSelf,
+    SkipInstall,
 }
 
 #[derive(Default)]
@@ -362,6 +365,7 @@ impl Shell {
             }),
             Page::Settings => pages::settings::show(self, ui, view, settings, effects),
             Page::About => pages::about::show(self, ui, view, effects),
+            Page::Welcome => pages::welcome::show(ui, view, effects),
         }
     }
 }

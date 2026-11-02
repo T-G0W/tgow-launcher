@@ -99,6 +99,8 @@ pub enum Text {
     Installed,
     UpdateAvailable,
     Failed,
+    WelcomeBody,
+    RunWithoutInstall,
 }
 
 impl Text {
@@ -249,6 +251,11 @@ impl Text {
             Self::Installed => ("Installiert", "Installed"),
             Self::UpdateAvailable => ("Update verfügbar", "Update available"),
             Self::Failed => ("Fehlgeschlagen", "Failed"),
+            Self::WelcomeBody => (
+                "Installiere den Launcher für deinen Benutzer. Es werden keine Administratorrechte benötigt, und er hält alle Projekte von T-GOW automatisch aktuell.",
+                "Install the launcher for your user. No administrator rights are needed, and it keeps every T-GOW project up to date automatically.",
+            ),
+            Self::RunWithoutInstall => ("Ohne Installation starten", "Run without installing"),
             Self::LinksPending => (
                 "Discord und Website folgen.",
                 "Discord and website coming soon.",
