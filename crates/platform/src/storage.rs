@@ -1,5 +1,5 @@
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
 
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
@@ -8,7 +8,10 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
     }
     let mut staging = path.as_os_str().to_owned();
     staging.push(".new");
-    fs::write(&staging, bytes)?;
+    let mut file = fs::File::create(&staging)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
     fs::rename(&staging, path)
 }
 
