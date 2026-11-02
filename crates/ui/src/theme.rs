@@ -205,3 +205,62 @@ pub const FONT_LICENSES: [(&str, &str); 3] = [
         include_str!("../../../assets/fonts/OFL-JetBrainsMono.txt"),
     ),
 ];
+
+#[cfg(test)]
+mod tests {
+    use egui::Color32;
+
+    use super::{
+        ACCENT, ACCENT_SOFT, BG, BG_DEEP, DANGER, ON_ACCENT, POSITIVE, SURFACE_0, SURFACE_1,
+        SURFACE_2, SURFACE_3, TEXT, TEXT_FAINT, TEXT_MUTED, WARNING,
+    };
+
+    const AA: f32 = 4.5;
+
+    fn luminance(color: Color32) -> f32 {
+        let channel = |value: u8| {
+            let value = f32::from(value) / 255.0;
+            if value <= 0.040_45 {
+                value / 12.92
+            } else {
+                ((value + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * channel(color.r()) + 0.7152 * channel(color.g()) + 0.0722 * channel(color.b())
+    }
+
+    fn contrast(first: Color32, second: Color32) -> f32 {
+        let (first, second) = (luminance(first), luminance(second));
+        (first.max(second) + 0.05) / (first.min(second) + 0.05)
+    }
+
+    #[test]
+    fn every_text_color_meets_wcag_aa_on_panels() {
+        for background in [BG_DEEP, BG, SURFACE_0, SURFACE_1] {
+            for text in [
+                TEXT,
+                TEXT_MUTED,
+                TEXT_FAINT,
+                ACCENT,
+                ACCENT_SOFT,
+                POSITIVE,
+                WARNING,
+                DANGER,
+            ] {
+                let ratio = contrast(text, background);
+                assert!(ratio >= AA, "{text:?} on {background:?}: {ratio:.2}");
+            }
+        }
+    }
+
+    #[test]
+    fn control_labels_meet_wcag_aa() {
+        for background in [SURFACE_2, SURFACE_3] {
+            for text in [TEXT, TEXT_MUTED, ACCENT_SOFT] {
+                let ratio = contrast(text, background);
+                assert!(ratio >= AA, "{text:?} on {background:?}: {ratio:.2}");
+            }
+        }
+        assert!(contrast(ON_ACCENT, ACCENT) >= AA);
+    }
+}
