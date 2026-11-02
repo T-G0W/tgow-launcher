@@ -18,16 +18,22 @@ jobs:
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             platform: windows-x64
+            rustflags: -C target-feature=+crt-static
+            binary: tgow-launcher.exe
           - runner: windows-11-arm
             target: aarch64-pc-windows-msvc
             platform: windows-arm64
+            rustflags: -C target-feature=+crt-static
+            binary: tgow-launcher.exe
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             platform: linux-x86_64
+            rustflags: ""
+            binary: tgow-launcher
     runs-on: ${{ matrix.runner }}
     env:
       CARGO_HOME: ${{ github.workspace }}/.cargo-home
-      RUSTFLAGS: --remap-path-prefix=${{ github.workspace }}=/src
+      RUSTFLAGS: --remap-path-prefix=${{ github.workspace }}=/src ${{ matrix.rustflags }}
     defaults:
       run:
         shell: bash
@@ -39,15 +45,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
       - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
       - run: rustup target add ${{ matrix.target }}
-      - run: cargo build --release --locked --target ${{ matrix.target }} -p tgow-launcher
+      - run: cargo install cargo-auditable --version 0.7.7 --locked
+      - run: cargo auditable build --release --locked --target ${{ matrix.target }} -p tgow-launcher
+      - run: cargo xtask audit-binary "target/${{ matrix.target }}/release/${{ matrix.binary }}"
       - run: |
           version="${GITHUB_REF_NAME#v}"
           mkdir dist
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp "target/${{ matrix.target }}/release/tgow-launcher.exe" "dist/tgow-launcher-${version}-${{ matrix.platform }}-portable.exe"
+            cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "dist/tgow-launcher-${version}-${{ matrix.platform }}-portable.exe"
           else
             mkdir -p "stage/tgow-launcher-${version}"
-            cp "target/${{ matrix.target }}/release/tgow-launcher" "stage/tgow-launcher-${version}/"
+            cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "stage/tgow-launcher-${version}/"
             tar -C stage -czf "dist/tgow-launcher-${version}-${{ matrix.platform }}.tar.gz" "tgow-launcher-${version}"
           fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

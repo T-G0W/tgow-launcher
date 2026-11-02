@@ -19,8 +19,10 @@ No telemetry, no account, no tracking. The launcher only talks to GitHub. GitHub
 ## Building
 
 ```
-cargo build --release
+cargo xtask dist
 ```
+
+This builds the release binary with every local path remapped and fails if the binary still contains a home directory path or an email address. A plain `cargo build --release` works too but keeps the paths of your machine in panic messages.
 
 Checks used in CI:
 
@@ -29,6 +31,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo xtask nocomments
 cargo test --workspace
+cargo deny check
 ```
 
 ## License

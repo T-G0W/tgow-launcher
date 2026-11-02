@@ -1,8 +1,10 @@
 #![forbid(unsafe_code)]
 
 mod aifiles;
+mod audit;
 mod comments;
 mod commits;
+mod dist;
 mod error;
 mod icons;
 mod names;
@@ -12,6 +14,7 @@ mod report;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::path::Path;
 use std::process::{Command, ExitCode};
 
 use crate::error::Error;
@@ -21,13 +24,15 @@ use crate::report::Finding;
 const USAGE: &str = "Usage: cargo xtask <command>
 
 Commands:
-  nocomments       Reject comments in every tracked file
-  names            Reject catch-all type and module names
-  aifiles          Reject ai tool files in the repository
-  commits [range]  Check commit messages, identity and time zone
-  icons            Render assets/brand/tgow-launcher.ico from the logo geometry
-  precommit        Run the fast checks for the pre-commit hook
-  install-hooks    Install the local pre-commit hook
+  nocomments           Reject comments in every tracked file
+  names                Reject catch-all type and module names
+  aifiles              Reject ai tool files in the repository
+  commits [range]      Check commit messages, identity and time zone
+  audit-binary <file>  Reject home directory paths and email addresses in a build
+  dist                 Build the release binary without local paths and audit it
+  icons                Render assets/brand/tgow-launcher.ico from the logo geometry
+  precommit            Run the fast checks for the pre-commit hook
+  install-hooks        Install the local pre-commit hook
 ";
 
 const HOOK: &str = "#!/bin/sh\nexec cargo xtask precommit\n";
@@ -68,6 +73,11 @@ fn dispatch(repo: &Repo, args: &[String]) -> Result<Vec<Finding>, Error> {
         "precommit" => precommit(repo),
         "install-hooks" => install_hooks(repo),
         "icons" => icons::write(&repo.root),
+        "dist" => dist::build(repo),
+        "audit-binary" => rest
+            .first()
+            .ok_or_else(|| Error::Usage(USAGE.to_owned()))
+            .and_then(|file| audit::check(Path::new(file))),
         _ => Err(Error::Usage(USAGE.to_owned())),
     }
 }
