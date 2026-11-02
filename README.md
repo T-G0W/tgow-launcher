@@ -18,7 +18,7 @@ A repository of T-G0W shows up in the launcher when it has the `tgow-launcher` t
 
 Name every asset `<app>-<version>-<os>-<arch>[-setup|-portable].<ext>`, for example `ferrovox-1.1.0-windows-x64-setup.exe`, `ferrovox-1.1.0-windows-arm64-portable.zip` or `ferrovox-1.1.0-linux-x86_64.AppImage`. The launcher picks the asset for the native architecture first and falls back to emulation.
 
-Call the reusable workflow after the build jobs have uploaded their artifacts:
+Call the reusable workflow from the tag workflow once the build jobs have uploaded their artifacts and the GitHub release for the tag exists:
 
 ```yaml
 release:
