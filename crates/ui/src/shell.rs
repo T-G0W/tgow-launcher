@@ -106,6 +106,7 @@ pub struct Shell {
     pub(crate) detail: pages::app::State,
     pub(crate) copied_at: Option<f64>,
     notices: Vec<(String, f64)>,
+    ambient: f32,
     starfield: Starfield,
 }
 
@@ -120,14 +121,14 @@ impl Shell {
         let mut effects = Vec::new();
         let full = ui.max_rect();
         let time = ui.input(|input| input.time);
-        let animated = !widgets::reduced_motion(ui.ctx());
-        self.starfield.paint(
-            ui.painter(),
-            full,
-            if animated { shape::seconds(time) } else { 0.0 },
-        );
+        let focused = ui.input(|input| input.viewport().focused.unwrap_or(true));
+        let animated = !widgets::reduced_motion(ui.ctx()) && focused;
         if animated {
-            ui.ctx().request_repaint_after(Duration::from_millis(33));
+            self.ambient = shape::seconds(time);
+        }
+        self.starfield.paint(ui.painter(), full, self.ambient);
+        if animated {
+            ui.ctx().request_repaint_after(Duration::from_millis(50));
         }
         let expansion = animate(
             ui.ctx(),
