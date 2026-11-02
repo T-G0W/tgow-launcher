@@ -9,9 +9,11 @@ use tgow_core::platform::Platform;
 use tgow_core::select::{self, Preference};
 use tgow_core::settings::{Settings, UpdateMode};
 use tgow_platform::{process, storage};
-use tgow_ui::shell::Phase;
+use tgow_ui::shell::{Finished, Outcome, Phase};
 
 use crate::jobs::{Jobs, Order, Report, Task};
+
+const RECENT: usize = 6;
 
 pub(crate) struct Library {
     ledger: Ledger,
@@ -19,6 +21,7 @@ pub(crate) struct Library {
     detected: BTreeMap<String, Installation>,
     pub(crate) installed: BTreeMap<String, Installation>,
     pub(crate) phases: BTreeMap<String, Phase>,
+    pub(crate) recent: Vec<Finished>,
     pub(crate) failures: BTreeMap<String, String>,
     jobs: Option<Jobs>,
     parallel: Arc<AtomicUsize>,
@@ -46,6 +49,7 @@ impl Library {
             detected: BTreeMap::new(),
             installed: BTreeMap::new(),
             phases: BTreeMap::new(),
+            recent: Vec::new(),
             failures: BTreeMap::new(),
             jobs,
             parallel,
@@ -130,10 +134,18 @@ impl Library {
                 }
                 Report::LauncherUpdated(version) => {
                     self.phases.remove(tgow_core::catalog::LAUNCHER_REPO);
+                    self.remember(
+                        tgow_core::catalog::LAUNCHER_REPO,
+                        Outcome::Installed(version.clone()),
+                    );
                     finished.push((tgow_core::catalog::LAUNCHER_REPO.to_owned(), version));
                 }
                 Report::Installed(installation) => {
                     finished.push((installation.app.clone(), installation.version.clone()));
+                    self.remember(
+                        &installation.app,
+                        Outcome::Installed(installation.version.clone()),
+                    );
                     self.phases.remove(&installation.app);
                     self.failures.remove(&installation.app);
                     self.detected.remove(&installation.app);
@@ -142,6 +154,7 @@ impl Library {
                     self.merge();
                 }
                 Report::Removed(app) => {
+                    self.remember(&app, Outcome::Removed);
                     self.phases.remove(&app);
                     self.detected.remove(&app);
                     self.ledger.forget(&app);
@@ -149,12 +162,24 @@ impl Library {
                     self.merge();
                 }
                 Report::Failed(app, message) => {
+                    self.remember(&app, Outcome::Failed);
                     self.phases.remove(&app);
                     self.failures.insert(app, message);
                 }
             }
         }
         finished
+    }
+
+    fn remember(&mut self, app: &str, outcome: Outcome) {
+        self.recent.insert(
+            0,
+            Finished {
+                app: app.to_owned(),
+                outcome,
+            },
+        );
+        self.recent.truncate(RECENT);
     }
 
     pub(crate) fn install(&mut self, app: &App, platform: &Platform, settings: &Settings) {

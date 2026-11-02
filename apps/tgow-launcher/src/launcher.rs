@@ -38,6 +38,7 @@ pub(crate) struct Launcher {
     interval: u32,
     library: Library,
     artwork: BTreeMap<String, Artwork>,
+    latest_release: Option<String>,
     messages: Option<Receiver<String>>,
     autostart: Option<bool>,
     lifecycle: Lifecycle,
@@ -95,6 +96,7 @@ impl Launcher {
             interval,
             library,
             artwork: BTreeMap::new(),
+            latest_release: None,
             messages,
             autostart: None,
             lifecycle: Lifecycle::Running,
@@ -196,7 +198,13 @@ impl Launcher {
                     self.library
                         .update_outdated(&self.apps, &self.platform, &self.settings);
                 }
-                Event::Launcher(app) => self.consider_self_update(&app),
+                Event::Launcher(app) => {
+                    self.latest_release = app
+                        .manifest()
+                        .map(|manifest| manifest.version.to_string())
+                        .or_else(|| app.tag.clone());
+                    self.consider_self_update(&app);
+                }
                 Event::Media(app, slot, image) => {
                     let texture = ctx.load_texture(
                         format!("{app}-{slot:?}"),
@@ -416,6 +424,8 @@ impl eframe::App for Launcher {
             jobs: &self.library.phases,
             failures: &self.library.failures,
             artwork: &self.artwork,
+            recent: &self.library.recent,
+            launcher_latest: self.latest_release.as_deref(),
         };
         let effects = self.shell.show(ui, &view, &mut self.settings);
         self.apply(&ctx, effects);

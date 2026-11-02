@@ -106,6 +106,20 @@ pub enum Text {
     ArrangeGrid,
     ArrangeList,
     RunWithoutInstall,
+    ShowAll,
+    Ongoing,
+    UpNext,
+    FinishedSection,
+    Status,
+    Operational,
+    Checking,
+    Unreachable,
+    Limited,
+    Catalog,
+    UpToDate,
+    LastChecked,
+    Never,
+    Removed,
 }
 
 impl Text {
@@ -273,6 +287,20 @@ impl Text {
             Self::ArrangeGrid => ("Raster", "Grid"),
             Self::ArrangeList => ("Liste", "List"),
             Self::DiscordSoon => ("Discord kommt bald", "Discord coming soon"),
+            Self::ShowAll => ("Alle anzeigen", "Show all"),
+            Self::Ongoing => ("Läuft", "Ongoing"),
+            Self::UpNext => ("Als Nächstes", "Up next"),
+            Self::FinishedSection => ("Fertig", "Finished"),
+            Self::Status => ("Status", "Status"),
+            Self::Operational => ("Betriebsbereit", "Operational"),
+            Self::Checking => ("Wird geprüft", "Checking"),
+            Self::Unreachable => ("Nicht erreichbar", "Unreachable"),
+            Self::Limited => ("Eingeschränkt", "Limited"),
+            Self::Catalog => ("Katalog", "Catalog"),
+            Self::UpToDate => ("Aktuell", "Up to date"),
+            Self::LastChecked => ("Zuletzt geprüft", "Last checked"),
+            Self::Never => ("Noch nie", "Never"),
+            Self::Removed => ("Entfernt", "Removed"),
         }
     }
 }

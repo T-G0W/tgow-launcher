@@ -7,7 +7,7 @@ use tgow_core::catalog::{App, Repository};
 use tgow_core::install::Installation;
 use tgow_core::platform::{Arch, Os, Platform};
 use tgow_core::settings::{Language, Settings};
-use tgow_ui::shell::{Artwork, CatalogStatus, Effect, Page, Phase, Shell, View};
+use tgow_ui::shell::{Artwork, CatalogStatus, Effect, Finished, Page, Phase, Shell, View};
 use tgow_ui::{theme, widgets};
 
 struct Fixture {
@@ -19,6 +19,7 @@ struct Fixture {
     jobs: BTreeMap<String, Phase>,
     failures: BTreeMap<String, String>,
     artwork: BTreeMap<String, Artwork>,
+    recent: Vec<Finished>,
     effects: Vec<Effect>,
     ready: bool,
 }
@@ -37,6 +38,7 @@ impl Fixture {
             jobs: BTreeMap::new(),
             failures: BTreeMap::new(),
             artwork: BTreeMap::new(),
+            recent: Vec::new(),
             effects: Vec::new(),
             ready: false,
         }
@@ -74,6 +76,8 @@ fn frame(ui: &mut egui::Ui, fixture: &mut Fixture) {
         jobs: &fixture.jobs,
         failures: &fixture.failures,
         artwork: &fixture.artwork,
+        recent: &fixture.recent,
+        launcher_latest: None,
     };
     let effects = fixture.shell.show(ui, &view, &mut fixture.settings);
     fixture.effects.extend(effects);
@@ -180,4 +184,33 @@ fn back_returns_through_the_visited_pages() {
             .query_by_role_and_label(Role::Button, "Zurück")
             .is_none()
     );
+}
+
+#[test]
+fn title_bar_opens_and_closes_the_popovers() {
+    let mut harness = harness(&[]);
+    harness
+        .get_by_role_and_label(Role::Button, "Status")
+        .click();
+    harness.run();
+    assert!(harness.query_by_label("Betriebsbereit").is_some());
+    assert_eq!(
+        harness
+            .get_all_by_role_and_label(Role::Button, "Jetzt prüfen")
+            .count(),
+        2
+    );
+    harness.key_press(Key::Escape);
+    harness.run();
+    assert!(harness.query_by_label("Betriebsbereit").is_none());
+    harness
+        .get_by_role_and_label(Role::Button, "Downloads")
+        .click();
+    harness.run();
+    assert!(harness.query_by_label("Keine Downloads").is_some());
+    harness
+        .get_by_role_and_label(Role::Link, "Alle anzeigen")
+        .click();
+    harness.run();
+    assert_eq!(harness.state().shell.page, Page::Downloads);
 }

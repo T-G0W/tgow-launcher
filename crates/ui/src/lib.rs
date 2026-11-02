@@ -3,6 +3,7 @@
 pub mod brand;
 pub mod icons;
 mod pages;
+mod popover;
 pub mod shape;
 pub mod shell;
 mod starfield;

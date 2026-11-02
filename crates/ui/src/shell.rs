@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use egui::{Rect, Sense, Stroke, Ui, UiBuilder, Vec2, ViewportCommand, pos2, vec2};
+use egui::{Align2, Rect, Sense, Stroke, Ui, UiBuilder, Vec2, ViewportCommand, pos2, vec2};
 use tgow_core::catalog::App;
 use tgow_core::install::Installation;
 use tgow_core::links::Destination;
@@ -10,6 +10,7 @@ use tgow_core::settings::{Language, Settings};
 
 use crate::icons::Icon;
 use crate::pages;
+use crate::popover::{self, Popover};
 use crate::starfield::Starfield;
 use crate::text::Text;
 use crate::theme::{self, Font};
@@ -76,6 +77,8 @@ pub struct View<'a> {
     pub jobs: &'a BTreeMap<String, Phase>,
     pub failures: &'a BTreeMap<String, String>,
     pub artwork: &'a BTreeMap<String, Artwork>,
+    pub recent: &'a [Finished],
+    pub launcher_latest: Option<&'a str>,
 }
 
 impl View<'_> {
@@ -88,6 +91,19 @@ impl View<'_> {
     pub fn app(&self, id: &str) -> Option<&App> {
         self.apps.iter().find(|app| app.id == id)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Outcome {
+    Installed(String),
+    Removed,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Finished {
+    pub app: String,
+    pub outcome: Outcome,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,6 +126,8 @@ pub enum Effect {
 pub struct Shell {
     pub page: Page,
     history: Vec<Page>,
+    popover: Option<Popover>,
+    anchors: Vec<(Popover, Rect)>,
     pub(crate) settings_page: pages::settings::Section,
     pub(crate) library: pages::library::State,
     pub(crate) detail: pages::app::State,
@@ -192,6 +210,7 @@ impl Shell {
         self.sidebar(&mut sidebar_ui, view, settings, expansion, &mut effects);
         let mut content_ui = ui.new_child(UiBuilder::new().max_rect(content));
         self.content(&mut content_ui, view, settings, &mut effects);
+        self.popover(ui, view, &mut effects);
         if effects.contains(&Effect::Back) {
             effects.retain(|effect| *effect != Effect::Back);
             self.go_back();
@@ -225,8 +244,69 @@ impl Shell {
         if refresh {
             effects.push(Effect::CheckNow);
         }
-        if back || (escape && matches!(self.page, Page::App(_))) {
+        if escape && self.popover.is_some() {
+            self.popover = None;
+        } else if back || (escape && matches!(self.page, Page::App(_))) {
             self.go_back();
+        }
+    }
+
+    fn toggle(&mut self, kind: Popover, anchor: Rect) {
+        self.anchors.retain(|(existing, _)| *existing != kind);
+        self.anchors.push((kind, anchor));
+        self.popover = if self.popover == Some(kind) {
+            None
+        } else {
+            Some(kind)
+        };
+    }
+
+    fn popover(&mut self, ui: &Ui, view: &View<'_>, effects: &mut Vec<Effect>) {
+        let Some(kind) = self.popover else {
+            return;
+        };
+        let Some(anchor) = self
+            .anchors
+            .iter()
+            .find(|(existing, _)| *existing == kind)
+            .map(|(_, rect)| *rect)
+        else {
+            return;
+        };
+        let screen = ui.ctx().content_rect();
+        let left = (anchor.right() + theme::S - popover::WIDTH).clamp(
+            screen.left() + theme::S,
+            screen.right() - popover::WIDTH - theme::S,
+        );
+        let mut open = None;
+        let area = egui::Area::new(egui::Id::unique("tgow.popover"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(pos2(left, anchor.bottom() + 6.0))
+            .show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style())
+                    .inner_margin(egui::Margin::same(16))
+                    .show(ui, |ui| {
+                        ui.set_width(popover::WIDTH - 32.0);
+                        match kind {
+                            Popover::Downloads => open = popover::downloads(ui, view, effects),
+                            Popover::Status => popover::status(ui, view, effects),
+                        }
+                    });
+            });
+        if let Some(page) = open {
+            self.popover = None;
+            self.open(page);
+            return;
+        }
+        let outside = ui.input(|input| {
+            input.pointer.any_click()
+                && input.pointer.interact_pos().is_some_and(|pointer| {
+                    !area.response.rect.contains(pointer)
+                        && !self.anchors.iter().any(|(_, rect)| rect.contains(pointer))
+                })
+        });
+        if outside {
+            self.popover = None;
         }
     }
 
@@ -346,13 +426,17 @@ impl Shell {
                 {
                     effects.push(Effect::Open(url.to_owned()));
                 }
-                if widgets::icon_button(ui, Icon::Downloads, view.t(Text::Downloads), 34.0)
-                    .clicked()
-                {
-                    self.page = Page::Downloads;
+                let downloads =
+                    widgets::icon_button(ui, Icon::Downloads, view.t(Text::Downloads), 34.0);
+                paint_badge(ui, downloads.rect, view.jobs.len());
+                if downloads.clicked() {
+                    self.toggle(Popover::Downloads, downloads.rect);
                 }
                 ui.add_space(theme::S);
-                status_dot(ui, view);
+                let status = status_dot(ui, view);
+                if status.clicked() {
+                    self.toggle(Popover::Status, status.rect);
+                }
             },
         );
     }
@@ -455,14 +539,31 @@ pub(crate) fn padded(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
         });
 }
 
-fn status_dot(ui: &mut Ui, view: &View<'_>) {
+fn paint_badge(ui: &Ui, rect: Rect, count: usize) {
+    if count == 0 {
+        return;
+    }
+    let center = pos2(rect.right() - 7.0, rect.top() + 8.0);
+    ui.painter().circle_filled(center, 7.5, theme::ACCENT);
+    ui.painter().text(
+        center,
+        Align2::CENTER_CENTER,
+        count.min(9).to_string(),
+        Font::Label.id(10.0),
+        theme::ON_ACCENT,
+    );
+}
+
+fn status_dot(ui: &mut Ui, view: &View<'_>) -> egui::Response {
     let (color, label) = match &view.status {
         CatalogStatus::Ready => (theme::POSITIVE, view.t(Text::CatalogUpdated).to_owned()),
         CatalogStatus::Loading => (theme::ACCENT, view.t(Text::CatalogLoading).to_owned()),
         CatalogStatus::Offline => (theme::WARNING, view.t(Text::CatalogOffline).to_owned()),
         CatalogStatus::Limited { minutes } => (theme::WARNING, format!("GitHub · {minutes} min")),
     };
-    let (rect, response) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
+    let (rect, response) = ui.allocate_exact_size(vec2(26.0, 26.0), Sense::click());
+    response
+        .widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, view.t(Text::Status)));
     ui.painter().circle_filled(rect.center(), 4.0, color);
     ui.painter().circle_stroke(
         rect.center(),
@@ -472,5 +573,7 @@ fn status_dot(ui: &mut Ui, view: &View<'_>) {
     let detail = view
         .checked
         .map_or(label.clone(), |checked| format!("{label} · {checked}"));
-    response.on_hover_text(detail);
+    response
+        .on_hover_text(detail)
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
 }

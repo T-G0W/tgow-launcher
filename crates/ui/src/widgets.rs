@@ -158,6 +158,30 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
     }
 }
 
+pub fn link(ui: &mut Ui, label: &str) -> Response {
+    let galley = galley(ui, label, Font::Strong, 13.0, theme::ACCENT_SOFT);
+    let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(4.0, 6.0), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Link, true, label));
+    let hover = animate(
+        ui.ctx(),
+        response.id.with("hover"),
+        response.hovered(),
+        theme::FAST,
+    );
+    let color = theme::ACCENT_SOFT.lerp_to_gamma(theme::TEXT, hover);
+    let text_rect = Rect::from_center_size(rect.center(), galley.size());
+    ui.painter().galley(text_rect.min, galley, color);
+    if hover > 0.0 {
+        ui.painter().hline(
+            text_rect.x_range(),
+            text_rect.bottom() + 1.0,
+            Stroke::new(1.0, color.gamma_multiply(hover)),
+        );
+    }
+    focus_ring(ui, &response, rect, theme::RADIUS_S);
+    response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
 pub fn ghost_button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
     let galley = galley(ui, &label.to_uppercase(), Font::Button, 12.0, theme::TEXT);
     let desired = vec2(galley.size().x + 46.0, 32.0);
@@ -422,6 +446,7 @@ pub fn segmented<T: Copy + PartialEq>(
 pub fn chip(ui: &mut Ui, label: &str, color: Color32) -> Response {
     let galley = galley(ui, label, Font::Label, 10.0, color);
     let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(18.0, 10.0), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, label));
     shape::fill(
         ui.painter(),
         rect,
