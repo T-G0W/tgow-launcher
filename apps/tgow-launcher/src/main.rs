@@ -8,6 +8,7 @@ mod launcher;
 mod library;
 #[cfg(windows)]
 mod tray;
+mod update;
 
 use std::sync::Arc;
 
@@ -32,6 +33,19 @@ fn main() -> eframe::Result {
         .find(|argument| argument.starts_with("tgow:"))
         .cloned()
         .unwrap_or_default();
+    if arguments
+        .iter()
+        .any(|argument| argument == update::AFTER_UPDATE_FLAG)
+    {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+    }
+    let paths = Paths::locate();
+    if let (Some(paths), Ok(executable)) = (&paths, std::env::current_exe())
+        && update::Guard::new(&paths.data, &executable).on_start()
+    {
+        let _ = tgow_platform::process::launch(&executable, &arguments);
+        return Ok(());
+    }
     let messages = match instance::claim(&message) {
         Claim::Forwarded => return Ok(()),
         Claim::First(receiver) => Some(receiver),
@@ -42,7 +56,6 @@ fn main() -> eframe::Result {
         messages: std::sync::Mutex::new(messages),
         initial: message,
     };
-    let paths = Paths::locate();
     let settings = paths
         .as_ref()
         .and_then(|paths| storage::read_text(&paths.settings()))

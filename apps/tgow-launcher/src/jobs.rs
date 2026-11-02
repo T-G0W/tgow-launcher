@@ -29,10 +29,12 @@ pub(crate) struct Order {
 pub(crate) enum Task {
     Install(Order),
     Uninstall(Installation),
+    SelfUpdate(Order),
 }
 
 pub(crate) enum Report {
     Phase(String, Phase),
+    LauncherUpdated(String),
     Installed(Installation),
     Removed(String),
     Failed(String, String),
@@ -45,7 +47,12 @@ pub(crate) struct Jobs {
 }
 
 impl Jobs {
-    pub(crate) fn start(ctx: egui::Context, downloads: PathBuf, apps: PathBuf) -> Self {
+    pub(crate) fn start(
+        ctx: egui::Context,
+        downloads: PathBuf,
+        apps: PathBuf,
+        data: PathBuf,
+    ) -> Self {
         let (tasks, inbox) = mpsc::channel::<(Task, Arc<AtomicBool>)>();
         let (outbox, reports) = mpsc::channel();
         let _ = thread::Builder::new()
@@ -55,6 +62,7 @@ impl Jobs {
                     client: Client::new(),
                     downloads,
                     apps,
+                    data,
                     outbox,
                     ctx,
                 };
@@ -102,6 +110,7 @@ struct Worker {
     client: Client,
     downloads: PathBuf,
     apps: PathBuf,
+    data: PathBuf,
     outbox: Sender<Report>,
     ctx: egui::Context,
 }
@@ -121,6 +130,13 @@ impl Worker {
                     Err(message) => self.send(Report::Failed(app, message)),
                 }
             }
+            Task::SelfUpdate(order) => {
+                let app = order.app.clone();
+                match self.self_update(&order, cancelled) {
+                    Ok(()) => self.send(Report::LauncherUpdated(order.version.clone())),
+                    Err(message) => self.send(Report::Failed(app, message)),
+                }
+            }
             Task::Uninstall(installation) => {
                 let app = installation.app.clone();
                 self.send(Report::Phase(app.clone(), Phase::Removing));
@@ -132,7 +148,33 @@ impl Worker {
         }
     }
 
+    fn self_update(&self, order: &Order, cancelled: &AtomicBool) -> Result<(), String> {
+        let file = self.fetch(order, cancelled)?;
+        let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+        let guard = crate::update::Guard::new(&self.data, &executable);
+        guard
+            .replace(&executable, &file, &order.version)
+            .map_err(|error| error.to_string())?;
+        let _ = fs::remove_file(&file);
+        Ok(())
+    }
+
     fn install(&self, order: &Order, cancelled: &AtomicBool) -> Result<Installation, String> {
+        let file = self.fetch(order, cancelled)?;
+        self.send(Report::Phase(order.app.clone(), Phase::Installing));
+        let target = Target {
+            app: &order.app,
+            name: &order.name,
+            version: &order.version,
+            root: &self.apps,
+        };
+        let installation =
+            install::install(&order.asset, &file, &target).map_err(|error| error.to_string())?;
+        let _ = fs::remove_file(&file);
+        Ok(installation)
+    }
+
+    fn fetch(&self, order: &Order, cancelled: &AtomicBool) -> Result<PathBuf, String> {
         let folder = self.downloads.join(&order.app);
         fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
         let file = folder.join(&order.asset.file);
@@ -184,16 +226,6 @@ impl Worker {
             return Err("download does not match the signed checksum".to_owned());
         }
         fs::rename(&partial, &file).map_err(|error| error.to_string())?;
-        self.send(Report::Phase(order.app.clone(), Phase::Installing));
-        let target = Target {
-            app: &order.app,
-            name: &order.name,
-            version: &order.version,
-            root: &self.apps,
-        };
-        let installation =
-            install::install(&order.asset, &file, &target).map_err(|error| error.to_string())?;
-        let _ = fs::remove_file(&file);
-        Ok(installation)
+        Ok(file)
     }
 }

@@ -25,17 +25,15 @@ impl Library {
     pub(crate) fn new(
         ctx: &egui::Context,
         ledger_file: Option<PathBuf>,
-        downloads: Option<PathBuf>,
-        apps: Option<PathBuf>,
+        folders: Option<(PathBuf, PathBuf, PathBuf)>,
     ) -> Self {
         let ledger = ledger_file
             .as_deref()
             .and_then(storage::read_text)
             .map(|text| Ledger::from_json(&text))
             .unwrap_or_default();
-        let jobs = downloads
-            .zip(apps)
-            .map(|(downloads, apps)| Jobs::start(ctx.clone(), downloads, apps));
+        let jobs =
+            folders.map(|(downloads, apps, data)| Jobs::start(ctx.clone(), downloads, apps, data));
         let mut library = Self {
             ledger,
             ledger_file,
@@ -75,6 +73,43 @@ impl Library {
         }
     }
 
+    pub(crate) fn self_update(&mut self, app: &App, platform: &Platform) {
+        let Some(manifest) = app.manifest() else {
+            return;
+        };
+        let (Some(tag), Some(jobs)) = (app.tag.clone(), &mut self.jobs) else {
+            return;
+        };
+        let kind = if platform.os == tgow_core::platform::Os::Windows {
+            tgow_core::asset::Kind::Exe
+        } else {
+            tgow_core::asset::Kind::AppImage
+        };
+        let preference = Preference {
+            installed: Some(kind),
+            chosen: None,
+            system_packages: false,
+        };
+        let Ok(choice) = select::choose(&manifest.assets, platform, preference) else {
+            return;
+        };
+        if choice.asset.kind != kind {
+            return;
+        }
+        self.phases.insert(app.id.clone(), Phase::Waiting);
+        jobs.submit(
+            &app.id,
+            Task::SelfUpdate(Order {
+                app: app.id.clone(),
+                name: manifest.name.clone(),
+                repository: app.repository.clone(),
+                tag,
+                version: manifest.version.to_string(),
+                asset: choice.asset.clone(),
+            }),
+        );
+    }
+
     pub(crate) fn poll(&mut self) -> Vec<(String, String)> {
         let Some(jobs) = &mut self.jobs else {
             return Vec::new();
@@ -85,6 +120,10 @@ impl Library {
             match report {
                 Report::Phase(app, phase) => {
                     self.phases.insert(app, phase);
+                }
+                Report::LauncherUpdated(version) => {
+                    self.phases.remove(tgow_core::catalog::LAUNCHER_REPO);
+                    finished.push((tgow_core::catalog::LAUNCHER_REPO.to_owned(), version));
                 }
                 Report::Installed(installation) => {
                     finished.push((installation.app.clone(), installation.version.clone()));
@@ -130,6 +169,10 @@ impl Library {
         };
         self.phases.insert(app.to_owned(), Phase::Removing);
         jobs.submit(app, Task::Uninstall(installation));
+    }
+
+    pub(crate) fn is_busy(&self) -> bool {
+        !self.phases.is_empty()
     }
 
     pub(crate) fn cancel(&mut self, app: &str) {

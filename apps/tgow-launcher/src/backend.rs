@@ -21,6 +21,7 @@ pub(crate) enum Command {
 
 pub(crate) enum Event {
     Apps(Vec<App>),
+    Launcher(Box<App>),
     Status(CatalogStatus),
     Checked,
 }
@@ -170,12 +171,15 @@ impl Worker {
             Err(Error::RateLimited(wait)) => return Outcome::Limited(wait),
             Err(_) => return Outcome::Offline,
         }
-        let names: Vec<String> = self
+        let mut names: Vec<String> = self
             .cache
             .repositories
             .iter()
             .map(|repository| repository.name.clone())
             .collect();
+        if !names.iter().any(|name| name == catalog::LAUNCHER_REPO) {
+            names.push(catalog::LAUNCHER_REPO.to_owned());
+        }
         self.cache.releases.retain(|name, _| names.contains(name));
         for name in names {
             match self.client.latest_tag(&name) {
@@ -223,10 +227,17 @@ impl Worker {
     }
 
     fn publish_apps(&self) {
+        let launcher = launcher_repository();
+        let release = self.cache.releases.get(catalog::LAUNCHER_REPO);
+        let mut app = App::from_repository(&launcher);
+        app.tag = release.and_then(|release| release.tag.clone());
+        app.release = release.map_or(ReleaseState::Unknown, |release| state(&launcher, release));
+        self.emit(Event::Launcher(Box::new(app)));
         let apps = self
             .cache
             .repositories
             .iter()
+            .filter(|repository| repository.name != catalog::LAUNCHER_REPO)
             .map(|repository| {
                 let mut app = App::from_repository(repository);
                 let release = self.cache.releases.get(&repository.name);
@@ -243,6 +254,24 @@ impl Worker {
         if let (Some(file), Ok(json)) = (&self.cache_file, serde_json::to_string(&self.cache)) {
             let _ = storage::write_atomic(file, json.as_bytes());
         }
+    }
+}
+
+fn launcher_repository() -> Repository {
+    Repository {
+        name: catalog::LAUNCHER_REPO.to_owned(),
+        full_name: format!("{}/{}", catalog::OWNER, catalog::LAUNCHER_REPO),
+        description: None,
+        topics: vec![catalog::TOPIC.to_owned()],
+        archived: false,
+        fork: false,
+        private: false,
+        html_url: format!(
+            "https://github.com/{}/{}",
+            catalog::OWNER,
+            catalog::LAUNCHER_REPO
+        ),
+        pushed_at: None,
     }
 }
 

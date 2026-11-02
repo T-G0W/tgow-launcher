@@ -5,7 +5,7 @@ use egui::{Context, OpenUrl, Ui, ViewportCommand};
 use tgow_core::catalog::App;
 use tgow_core::deeplink::DeepLink;
 use tgow_core::platform::Platform;
-use tgow_core::settings::{Language, Settings, WindowGeometry};
+use tgow_core::settings::{Language, Settings, UpdateMode, WindowGeometry};
 use tgow_platform::paths::Paths;
 use tgow_platform::{integration, storage};
 use tgow_ui::shell::{CatalogStatus, Effect, Page, Shell, View};
@@ -13,6 +13,14 @@ use tgow_ui::text::{self, Text};
 
 use crate::backend::{Backend, Command, Event};
 use crate::library::Library;
+use crate::update::{self, Guard};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Lifecycle {
+    Running,
+    RestartPending,
+    Quitting,
+}
 
 pub(crate) struct Launcher {
     shell: Shell,
@@ -29,7 +37,9 @@ pub(crate) struct Launcher {
     library: Library,
     messages: Option<Receiver<String>>,
     autostart: Option<bool>,
-    quitting: bool,
+    lifecycle: Lifecycle,
+    guard: Option<Guard>,
+    confirmed: bool,
     #[cfg(windows)]
     tray: Option<crate::tray::Tray>,
 }
@@ -52,9 +62,14 @@ impl Launcher {
         let library = Library::new(
             ctx,
             paths.as_ref().map(Paths::installed),
-            paths.as_ref().map(Paths::downloads),
-            paths.as_ref().map(|paths| paths.apps.clone()),
+            paths
+                .as_ref()
+                .map(|paths| (paths.downloads(), paths.apps.clone(), paths.data.clone())),
         );
+        let guard = paths
+            .as_ref()
+            .zip(std::env::current_exe().ok())
+            .map(|(paths, executable)| Guard::new(&paths.data, &executable));
         let locale = tgow_platform::system_locale();
         if let (Some(paths), Ok(executable)) = (&paths, std::env::current_exe())
             && paths.is_installed_copy(&executable)
@@ -78,7 +93,9 @@ impl Launcher {
             library,
             messages,
             autostart: None,
-            quitting: false,
+            lifecycle: Lifecycle::Running,
+            guard,
+            confirmed: false,
             #[cfg(windows)]
             tray,
         };
@@ -176,14 +193,61 @@ impl Launcher {
                     self.library
                         .update_outdated(&self.apps, &self.platform, &self.settings);
                 }
+                Event::Launcher(app) => self.consider_self_update(&app),
                 Event::Status(status) => self.status = status,
                 Event::Checked => self.checked_at = Some(Instant::now()),
             }
         }
     }
 
+    fn consider_self_update(&mut self, app: &App) {
+        let Some(manifest) = app.manifest() else {
+            return;
+        };
+        let version = manifest.version.to_string();
+        let allowed = !cfg!(debug_assertions)
+            && self.settings.launcher_updates == UpdateMode::Automatic
+            && self.lifecycle == Lifecycle::Running
+            && !self.library.phases.contains_key(&app.id)
+            && update::is_newer(&version, env!("CARGO_PKG_VERSION"))
+            && self
+                .guard
+                .as_ref()
+                .is_some_and(|guard| !guard.is_skipped(&version));
+        if allowed {
+            self.library.self_update(app, &self.platform);
+        }
+    }
+
+    fn restart(&mut self, ctx: &Context, hidden: bool) {
+        let Ok(executable) = std::env::current_exe() else {
+            return;
+        };
+        let mut arguments = vec![update::AFTER_UPDATE_FLAG.to_owned()];
+        if hidden {
+            arguments.push(integration::HIDDEN_FLAG.to_owned());
+        }
+        if tgow_platform::process::launch(&executable, &arguments).is_ok() {
+            self.lifecycle = Lifecycle::Quitting;
+            ctx.send_viewport_cmd(ViewportCommand::Close);
+        }
+    }
+
     fn poll_library(&mut self, now: f64) {
         for (app, version) in self.library.poll() {
+            if app == tgow_core::catalog::LAUNCHER_REPO {
+                self.lifecycle = Lifecycle::RestartPending;
+                let text = match self.language() {
+                    Language::German => format!(
+                        "T-GOW Launcher {version} ist bereit und startet beim Schließen neu"
+                    ),
+                    Language::English => {
+                        format!("T-GOW Launcher {version} is ready and restarts when closed")
+                    }
+                };
+                self.shell.notify(text, now);
+                continue;
+            }
             let title = self
                 .apps
                 .iter()
@@ -208,7 +272,7 @@ impl Launcher {
                 crate::tray::Action::Check => self.backend.send(Command::Refresh),
                 crate::tray::Action::Visit(url) => ctx.open_url(OpenUrl::new_tab(url)),
                 crate::tray::Action::Quit => {
-                    self.quitting = true;
+                    self.lifecycle = Lifecycle::Quitting;
                     ctx.send_viewport_cmd(ViewportCommand::Close);
                 }
             }
@@ -264,9 +328,21 @@ impl eframe::App for Launcher {
         self.poll_catalog();
         self.poll_library(ctx.input(|input| input.time));
         let close = ctx.input(|input| input.viewport().close_requested());
-        if close && !self.quitting && self.settings.close_to_tray && self.has_tray() {
+        if close && self.lifecycle == Lifecycle::RestartPending && !self.library.is_busy() {
+            ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+            let to_tray = self.settings.close_to_tray && self.has_tray();
+            self.restart(ctx, to_tray);
+        } else if close
+            && self.lifecycle == Lifecycle::Running
+            && self.settings.close_to_tray
+            && self.has_tray()
+        {
             ctx.send_viewport_cmd(ViewportCommand::CancelClose);
             ctx.send_viewport_cmd(ViewportCommand::Visible(false));
+        }
+        let hidden = !ctx.input(|input| input.viewport().visible().unwrap_or(true));
+        if hidden && self.lifecycle == Lifecycle::RestartPending && !self.library.is_busy() {
+            self.restart(ctx, true);
         }
     }
 
@@ -292,6 +368,12 @@ impl eframe::App for Launcher {
         let effects = self.shell.show(ui, &view, &mut self.settings);
         self.apply(&ctx, effects);
         self.remember_window(&ctx);
+        if !self.confirmed {
+            self.confirmed = true;
+            if let Some(guard) = &self.guard {
+                guard.confirm();
+            }
+        }
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
