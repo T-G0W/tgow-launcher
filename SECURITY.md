@@ -22,7 +22,7 @@ Only the latest release gets security fixes. The launcher installs its own updat
 
 - Nothing is installed or started unless the release manifest carries a valid Ed25519 signature from a key built into the launcher.
 - Every downloaded file must match the size and SHA-256 in that signed manifest.
-- Network access goes to four GitHub hosts only, over TLS, with every redirect checked against the same list.
+- Network access goes to five GitHub hosts only, over TLS, with every redirect checked against the same list. Images from repositories are only decoded, never run.
 - Archives cannot write outside their target folder.
 - A failed self-update leaves the previous version in place.
 

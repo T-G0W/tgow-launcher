@@ -4,6 +4,7 @@ use crate::manifest::{Identity, Manifest};
 use crate::trust::TrustedKeys;
 
 pub const OWNER: &str = "T-G0W";
+pub const REPOSITORY_ICON: &str = "assets/logo-512.png";
 pub const TOPIC: &str = "tgow-launcher";
 pub const LAUNCHER_REPO: &str = "tgow-launcher";
 pub const MANIFEST_FILE: &str = "tgow-release.json";
@@ -178,6 +179,16 @@ pub fn download_url(repository: &str, tag: &str, file: &str) -> String {
 }
 
 #[must_use]
+pub fn repository_file_url(repository: &str, path: &str) -> String {
+    format!("https://raw.githubusercontent.com/{OWNER}/{repository}/HEAD/{path}")
+}
+
+#[must_use]
+pub fn repository_banner(repository: &str) -> String {
+    format!("docs/images/{}-main.png", repository.to_ascii_lowercase())
+}
+
+#[must_use]
 pub fn tag_from_location(repository: &str, location: &str) -> Option<String> {
     let prefix = format!("https://github.com/{OWNER}/{repository}/releases/tag/");
     let tag = location.strip_prefix(&prefix)?;
@@ -285,6 +296,18 @@ mod tests {
         assert_eq!(
             download_url("ferrovox", "v1.0.2", "latest.json"),
             "https://github.com/T-G0W/ferrovox/releases/download/v1.0.2/latest.json"
+        );
+    }
+
+    #[test]
+    fn points_media_to_files_in_the_repository() {
+        assert_eq!(
+            super::repository_file_url("ferrovox", super::REPOSITORY_ICON),
+            "https://raw.githubusercontent.com/T-G0W/ferrovox/HEAD/assets/logo-512.png"
+        );
+        assert_eq!(
+            super::repository_banner("NeoCross"),
+            "docs/images/neocross-main.png"
         );
     }
 }

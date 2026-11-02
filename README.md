@@ -169,6 +169,8 @@ A repository of T-G0W shows up in the launcher when it has the `tgow-launcher` t
 
 Name every asset `<app>-<version>-<os>-<arch>[-setup|-portable].<ext>`, for example `ferrovox-1.1.0-windows-x64-setup.exe`, `ferrovox-1.1.0-windows-arm64-portable.zip` or `ferrovox-1.1.0-linux-x86_64.AppImage`. The launcher picks the asset for the native architecture first and falls back to emulation.
 
+For the library, put a square logo at `assets/logo-512.png` and a screenshot at `docs/images/<app>-main.png` into the repository. The launcher shows them on the card and the app page. Icons and hero images named in the signed manifest take precedence.
+
 Call the reusable workflow from the tag workflow once the build jobs have uploaded their artifacts and the GitHub release for the tag exists:
 
 ```yaml
@@ -191,7 +193,7 @@ It writes `tgow-release.json`, signs it and uploads it with `SHA256SUMS.txt` to 
 ## Under the hood
 
 - **UI:** [egui](https://github.com/emilk/egui) / eframe on OpenGL with wgpu as fallback, a custom widget layer with the octagon corner of the logo, AccessKit for screen readers, Chakra Petch, Bai Jamjuree and JetBrains Mono.
-- **Network:** [ureq](https://github.com/algesten/ureq) with rustls and the platform certificate verifier, no async runtime, a fixed allowlist of four GitHub hosts and redirects checked one by one.
+- **Network:** [ureq](https://github.com/algesten/ureq) with rustls and the platform certificate verifier, no async runtime, a fixed allowlist of five GitHub hosts and redirects checked one by one.
 - **Trust:** Ed25519 signatures with ed25519-compact, SHA-256 for every file, strict manifest checks for paths, sizes and versions.
 - **Windows integration:** real architecture through `IsWow64Process2`, uninstall entries in the registry, a tray icon, a named pipe for the single instance and `self-replace` for updates.
 - **Tooling:** everything is Rust, including `cargo xtask` for the checks and `tgow-release` for manifests and signatures.

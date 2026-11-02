@@ -1,8 +1,9 @@
-pub const ALLOWED_HOSTS: [&str; 4] = [
+pub const ALLOWED_HOSTS: [&str; 5] = [
     "api.github.com",
     "github.com",
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",
+    "raw.githubusercontent.com",
 ];
 
 #[must_use]
@@ -36,6 +37,7 @@ mod tests {
             "https://github.com/T-G0W/ferrovox/releases/latest",
             "https://release-assets.githubusercontent.com/github-production-release-asset/1?sig=x",
             "https://objects.githubusercontent.com/x",
+            "https://raw.githubusercontent.com/T-G0W/ferrovox/HEAD/assets/logo-512.png",
         ] {
             assert!(is_allowed(url), "{url}");
         }
@@ -45,7 +47,7 @@ mod tests {
             "https://evil.example/github.com",
             "https://user@github.com/x",
             "https://github.com:8443/x",
-            "https://raw.githubusercontent.com/x",
+            "https://gist.githubusercontent.com/x",
             "ftp://github.com/x",
         ] {
             assert!(!is_allowed(url), "{url}");

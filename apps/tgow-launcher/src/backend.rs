@@ -269,7 +269,7 @@ impl Worker {
         else {
             return;
         };
-        let wanted: Vec<(String, String, String, Slot)> = self
+        let wanted: Vec<(String, Source, Slot)> = self
             .cache
             .repositories
             .iter()
@@ -279,34 +279,66 @@ impl Worker {
                 let ReleaseState::Verified(manifest) = state(repository, release) else {
                     return None;
                 };
+                let stamp = repository
+                    .pushed_at
+                    .as_deref()
+                    .unwrap_or("unknown")
+                    .replace([':', '.'], "-");
                 Some(
                     [
-                        (manifest.icon.clone(), Slot::Icon),
-                        (manifest.hero.clone(), Slot::Hero),
+                        (
+                            manifest.icon.clone(),
+                            catalog::REPOSITORY_ICON.to_owned(),
+                            Slot::Icon,
+                        ),
+                        (
+                            manifest.hero.clone(),
+                            catalog::repository_banner(&repository.name),
+                            Slot::Hero,
+                        ),
                     ]
                     .into_iter()
-                    .filter_map(|(file, slot)| {
-                        Some((repository.name.clone(), tag.clone(), file?, slot))
+                    .map(|(signed, convention, slot)| {
+                        let source = match signed {
+                            Some(file) => Source::Release {
+                                tag: tag.clone(),
+                                file,
+                            },
+                            None => Source::Repository {
+                                stamp: stamp.clone(),
+                                path: convention,
+                            },
+                        };
+                        (repository.name.clone(), source, slot)
                     })
                     .collect::<Vec<_>>(),
                 )
             })
             .flatten()
             .collect();
-        for (repository, tag, file, slot) in wanted {
-            let key = format!("{repository}/{tag}/{file}");
+        for (repository, source, slot) in wanted {
+            let (key, path, url) = match &source {
+                Source::Release { tag, file } => (
+                    format!("{repository}/{tag}/{file}"),
+                    folder.join(&repository).join(tag).join(file),
+                    catalog::download_url(&repository, tag, file),
+                ),
+                Source::Repository { stamp, path } => (
+                    format!("{repository}/{stamp}/{path}"),
+                    folder.join(&repository).join(stamp).join(path),
+                    catalog::repository_file_url(&repository, path),
+                ),
+            };
             if self.shown.contains(&key) {
                 continue;
             }
-            let path = folder.join(&repository).join(&tag).join(&file);
+            self.shown.push(key);
             let bytes = storage_bytes(&path).or_else(|| {
-                let url = catalog::download_url(&repository, &tag, &file);
                 let bytes = self.client.fetch(&url, MEDIA_LIMIT).ok()?;
                 let _ = storage::write_atomic(&path, &bytes);
                 Some(bytes)
             });
             if let Some(image) = bytes.as_deref().and_then(media::decode) {
-                self.shown.push(key);
                 self.emit(Event::Media(repository.to_ascii_lowercase(), slot, image));
             }
         }
@@ -317,6 +349,11 @@ impl Worker {
             let _ = storage::write_atomic(file, json.as_bytes());
         }
     }
+}
+
+enum Source {
+    Release { tag: String, file: String },
+    Repository { stamp: String, path: String },
 }
 
 fn storage_bytes(path: &std::path::Path) -> Option<Vec<u8>> {
