@@ -6,6 +6,7 @@ use tgow_core::settings::{Language, Settings, UpdateMode};
 
 use super::library::{phase_label, status};
 use super::{accent_of, initial};
+use crate::icons::Icon;
 use crate::shell::{Effect, Page, Phase, Shell, View};
 use crate::text::Text;
 use crate::theme::{self, Font};
@@ -128,6 +129,13 @@ fn hero(
             Font::Display.id(132.0),
             accent.gamma_multiply(0.18),
         );
+    }
+    let mut top = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(
+        rect.min + vec2(40.0, 24.0),
+        vec2(rect.width() - 80.0, 32.0),
+    )));
+    if widgets::ghost_button(&mut top, Icon::Back, view.t(Text::Back)).clicked() {
+        effects.push(Effect::Back);
     }
     let mut inner = ui.new_child(
         egui::UiBuilder::new()

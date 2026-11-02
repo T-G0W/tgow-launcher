@@ -92,6 +92,7 @@ impl View<'_> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Effect {
+    Back,
     Open(String),
     Copy(String),
     SettingsChanged,
@@ -108,6 +109,7 @@ pub enum Effect {
 #[derive(Default)]
 pub struct Shell {
     pub page: Page,
+    history: Vec<Page>,
     pub(crate) settings_page: pages::settings::Section,
     pub(crate) library: pages::library::State,
     pub(crate) detail: pages::app::State,
@@ -118,8 +120,37 @@ pub struct Shell {
 }
 
 const NOTICE_SECONDS: f64 = 5.0;
+const HISTORY: usize = 32;
 
 impl Shell {
+    pub fn open(&mut self, page: Page) {
+        if page == self.page {
+            return;
+        }
+        let previous = std::mem::replace(&mut self.page, page);
+        if previous != Page::Welcome {
+            self.history.push(previous);
+            if self.history.len() > HISTORY {
+                self.history.remove(0);
+            }
+        }
+    }
+
+    pub fn back(&mut self) -> bool {
+        match self.history.pop() {
+            Some(page) => {
+                self.page = page;
+                true
+            }
+            None => false,
+        }
+    }
+
+    #[must_use]
+    pub fn can_go_back(&self) -> bool {
+        !self.history.is_empty()
+    }
+
     pub fn notify(&mut self, text: String, now: f64) {
         self.notices.push((text, now));
     }
@@ -161,34 +192,46 @@ impl Shell {
         self.sidebar(&mut sidebar_ui, view, settings, expansion, &mut effects);
         let mut content_ui = ui.new_child(UiBuilder::new().max_rect(content));
         self.content(&mut content_ui, view, settings, &mut effects);
+        if effects.contains(&Effect::Back) {
+            effects.retain(|effect| *effect != Effect::Back);
+            self.go_back();
+        }
         self.paint_notices(ui, content, time);
         effects
     }
 
     fn shortcuts(&mut self, ui: &Ui, effects: &mut Vec<Effect>) {
-        let (search, settings, downloads, refresh, back) = ui.input_mut(|input| {
+        let (search, settings, downloads, refresh, escape, back) = ui.input_mut(|input| {
             (
                 input.consume_key(egui::Modifiers::COMMAND, egui::Key::F),
                 input.consume_key(egui::Modifiers::COMMAND, egui::Key::Comma),
                 input.consume_key(egui::Modifiers::COMMAND, egui::Key::J),
                 input.consume_key(egui::Modifiers::NONE, egui::Key::F5),
                 input.key_pressed(egui::Key::Escape),
+                input.consume_key(egui::Modifiers::ALT, egui::Key::ArrowLeft)
+                    || input.pointer.button_clicked(egui::PointerButton::Extra1),
             )
         });
         if search {
-            self.page = Page::Library;
+            self.open(Page::Library);
             self.library.focus_search = true;
         }
         if settings {
-            self.page = Page::Settings;
+            self.open(Page::Settings);
         }
         if downloads {
-            self.page = Page::Downloads;
+            self.open(Page::Downloads);
         }
         if refresh {
             effects.push(Effect::CheckNow);
         }
-        if back && matches!(self.page, Page::App(_)) {
+        if back || (escape && matches!(self.page, Page::App(_))) {
+            self.go_back();
+        }
+    }
+
+    pub fn go_back(&mut self) {
+        if !self.back() && matches!(self.page, Page::App(_)) {
             self.page = Page::Library;
         }
     }
@@ -264,11 +307,24 @@ impl Shell {
             Rect::from_center_size(pos2(rect.left() + 26.0, rect.center().y), Vec2::splat(26.0)),
         );
         let name = widgets::galley(ui, view.t(Text::Product), Font::Button, 13.0, theme::TEXT);
+        let name_right = rect.left() + 48.0 + name.size().x;
         painter.galley(
             pos2(rect.left() + 48.0, rect.center().y - name.size().y / 2.0),
             name,
             theme::TEXT,
         );
+        if self.can_go_back() {
+            let back =
+                Rect::from_center_size(pos2(name_right + 30.0, rect.center().y), Vec2::splat(30.0));
+            let clicked = ui
+                .scope_builder(UiBuilder::new().max_rect(back), |ui| {
+                    widgets::icon_button(ui, Icon::Back, view.t(Text::Back), 30.0).clicked()
+                })
+                .inner;
+            if clicked {
+                self.go_back();
+            }
+        }
 
         ui.scope_builder(
             UiBuilder::new()
@@ -329,7 +385,7 @@ impl Shell {
             let selected =
                 self.page == page || (page == Page::Library && matches!(self.page, Page::App(_)));
             if widgets::nav_item(ui, icon, view.t(label), selected, expansion).clicked() {
-                self.page = page;
+                self.open(page);
             }
         }
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {

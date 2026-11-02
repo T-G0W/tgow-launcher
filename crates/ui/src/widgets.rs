@@ -158,6 +158,46 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
     }
 }
 
+pub fn ghost_button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
+    let galley = galley(ui, &label.to_uppercase(), Font::Button, 12.0, theme::TEXT);
+    let desired = vec2(galley.size().x + 46.0, 32.0);
+    let (rect, response) = ui.allocate_exact_size(desired, Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
+    if !ui.is_rect_visible(rect) {
+        return response;
+    }
+    let hover = animate(
+        ui.ctx(),
+        response.id.with("hover"),
+        response.hovered(),
+        theme::FAST,
+    );
+    let painter = ui.painter();
+    shape::fill(
+        painter,
+        rect,
+        theme::RADIUS_S,
+        theme::BG
+            .gamma_multiply(0.55)
+            .lerp_to_gamma(theme::SURFACE_2, hover),
+        Stroke::new(1.0, theme::LINE.lerp_to_gamma(theme::ACCENT, hover * 0.7)),
+    );
+    let color = theme::TEXT_MUTED.lerp_to_gamma(theme::TEXT, hover);
+    icons::paint(
+        painter,
+        Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(14.0)),
+        icon,
+        color,
+    );
+    painter.galley(
+        pos2(rect.left() + 32.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        color,
+    );
+    focus_ring(ui, &response, rect, theme::RADIUS_S);
+    response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
 pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str, side: f32) -> Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(side), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(Role::Button, true, tooltip));

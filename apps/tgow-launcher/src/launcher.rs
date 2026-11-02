@@ -114,7 +114,7 @@ impl Launcher {
 
     pub(crate) fn open(&mut self, message: &str) {
         if let Some(DeepLink::Open(app) | DeepLink::Install(app)) = DeepLink::parse(message) {
-            self.shell.page = Page::App(app);
+            self.shell.open(Page::App(app));
         }
     }
 
@@ -180,7 +180,7 @@ impl Launcher {
     fn handle_message(&mut self, ctx: &Context, message: &str) {
         match DeepLink::parse(message) {
             Some(DeepLink::Open(app) | DeepLink::Install(app)) => {
-                self.shell.page = Page::App(app);
+                self.shell.open(Page::App(app));
                 Self::show_window(ctx);
             }
             Some(DeepLink::Show) | None => Self::show_window(ctx),
@@ -323,6 +323,7 @@ impl Launcher {
     fn apply(&mut self, ctx: &Context, effects: Vec<Effect>) {
         for effect in effects {
             match effect {
+                Effect::Back => self.shell.go_back(),
                 Effect::Open(url) => ctx.open_url(OpenUrl::new_tab(url)),
                 Effect::Copy(text) => ctx.copy_text(text),
                 Effect::SettingsChanged => {
@@ -350,7 +351,7 @@ impl Launcher {
                 Effect::Uninstall(id) => self.library.uninstall(&id),
                 Effect::Reveal(id) => self.library.reveal(&id),
                 Effect::Cancel(id) => self.library.cancel(&id),
-                Effect::SkipInstall => self.shell.page = Page::Library,
+                Effect::SkipInstall => self.shell.open(Page::Library),
                 Effect::InstallSelf => self.install_self(ctx),
             }
         }

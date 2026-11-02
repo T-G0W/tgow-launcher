@@ -90,7 +90,7 @@ pub(crate) fn show(shell: &mut Shell, ui: &mut Ui, view: &View<'_>) {
                         .clicked()
                         {
                             shell.detail.tab = super::app::Tab::Notes;
-                            shell.page = Page::App(app.id.clone());
+                            shell.open(Page::App(app.id.clone()));
                         }
                     });
                     ui.add_space(theme::M);

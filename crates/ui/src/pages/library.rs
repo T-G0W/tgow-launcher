@@ -113,7 +113,7 @@ pub(crate) fn show(
             Arrangement::List => list(ui, &apps, view),
         };
         if let Some(app) = opened {
-            shell.page = Page::App(app.id.clone());
+            shell.open(Page::App(app.id.clone()));
         }
     });
 }

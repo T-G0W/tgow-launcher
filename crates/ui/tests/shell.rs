@@ -157,3 +157,27 @@ fn list_arrangement_keeps_apps_reachable() {
     harness.run();
     assert_eq!(harness.state().shell.page, Page::App("neocross".to_owned()));
 }
+
+#[test]
+fn back_returns_through_the_visited_pages() {
+    let mut harness = harness(&[]);
+    harness.get_by_role_and_label(Role::Tab, "Über").click();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Tab, "Einstellungen")
+        .click();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Button, "Zurück")
+        .click();
+    harness.run();
+    assert_eq!(harness.state().shell.page, Page::About);
+    harness.key_press_modifiers(Modifiers::ALT, Key::ArrowLeft);
+    harness.run();
+    assert_eq!(harness.state().shell.page, Page::Library);
+    assert!(
+        harness
+            .query_by_role_and_label(Role::Button, "Zurück")
+            .is_none()
+    );
+}
