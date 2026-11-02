@@ -158,9 +158,10 @@ pub fn button(ui: &mut Ui, label: &str, emphasis: Emphasis, enabled: bool) -> Re
     }
 }
 
+const MENU_WIDTH: f32 = 232.0;
+
 pub fn menu_item(ui: &mut Ui, icon: Icon, label: &str, danger: bool) -> Response {
-    let width = ui.available_width().max(200.0);
-    let (rect, response) = ui.allocate_exact_size(vec2(width, 34.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(MENU_WIDTH, 34.0), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(Role::MenuItem, true, label));
     let hover = animate(
         ui.ctx(),
@@ -205,7 +206,7 @@ pub fn menu_item(ui: &mut Ui, icon: Icon, label: &str, danger: bool) -> Response
 }
 
 pub fn menu_separator(ui: &mut Ui) {
-    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 9.0), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(vec2(MENU_WIDTH, 9.0), Sense::hover());
     ui.painter().hline(
         rect.x_range(),
         rect.center().y,
