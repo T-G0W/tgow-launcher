@@ -200,7 +200,10 @@ impl Worker {
 
     fn update_release(&mut self, name: &str, tag: Option<String>) {
         let known = self.cache.releases.get(name);
-        if known.is_some_and(|release| release.tag == tag && release.manifest.is_some()) {
+        let complete = |release: &Release| {
+            release.tag == tag && release.manifest.is_some() && release.signature.is_some()
+        };
+        if known.is_some_and(complete) {
             return;
         }
         let Some(tag) = tag else {
