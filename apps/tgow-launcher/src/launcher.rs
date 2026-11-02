@@ -65,6 +65,7 @@ impl Launcher {
             paths
                 .as_ref()
                 .map(|paths| (paths.downloads(), paths.apps.clone(), paths.data.clone())),
+            settings.parallel_downloads,
         );
         let guard = paths
             .as_ref()
@@ -318,6 +319,7 @@ impl Launcher {
                 Effect::SettingsChanged => {
                     self.save_settings();
                     self.apply_autostart();
+                    self.library.set_parallel(self.settings.parallel_downloads);
                     if self.settings.check_interval_minutes != self.interval {
                         self.interval = self.settings.check_interval_minutes;
                         self.backend.send(Command::Interval(minutes(self.interval)));

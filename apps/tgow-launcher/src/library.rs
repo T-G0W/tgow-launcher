@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use tgow_core::catalog::App;
 use tgow_core::install::{Installation, Ledger};
@@ -19,6 +21,7 @@ pub(crate) struct Library {
     pub(crate) phases: BTreeMap<String, Phase>,
     pub(crate) failures: BTreeMap<String, String>,
     jobs: Option<Jobs>,
+    parallel: Arc<AtomicUsize>,
 }
 
 impl Library {
@@ -26,14 +29,17 @@ impl Library {
         ctx: &egui::Context,
         ledger_file: Option<PathBuf>,
         folders: Option<(PathBuf, PathBuf, PathBuf)>,
+        parallel: u8,
     ) -> Self {
+        let parallel = Arc::new(AtomicUsize::new(usize::from(parallel)));
         let ledger = ledger_file
             .as_deref()
             .and_then(storage::read_text)
             .map(|text| Ledger::from_json(&text))
             .unwrap_or_default();
-        let jobs =
-            folders.map(|(downloads, apps, data)| Jobs::start(ctx.clone(), downloads, apps, data));
+        let limit = Arc::clone(&parallel);
+        let jobs = folders
+            .map(|(downloads, apps, data)| Jobs::start(ctx.clone(), downloads, apps, data, limit));
         let mut library = Self {
             ledger,
             ledger_file,
@@ -42,6 +48,7 @@ impl Library {
             phases: BTreeMap::new(),
             failures: BTreeMap::new(),
             jobs,
+            parallel,
         };
         library.merge();
         library
@@ -169,6 +176,11 @@ impl Library {
         };
         self.phases.insert(app.to_owned(), Phase::Removing);
         jobs.submit(app, Task::Uninstall(installation));
+    }
+
+    pub(crate) fn set_parallel(&self, downloads: u8) {
+        self.parallel
+            .store(usize::from(downloads), Ordering::Relaxed);
     }
 
     pub(crate) fn is_busy(&self) -> bool {

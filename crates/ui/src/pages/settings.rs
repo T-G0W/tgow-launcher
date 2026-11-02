@@ -13,7 +13,6 @@ pub(crate) enum Section {
     General,
     Updates,
     Downloads,
-    Notifications,
     Accessibility,
 }
 
@@ -34,11 +33,6 @@ pub(crate) fn show(
                     (Section::General, Icon::Settings, Text::SettingsGeneral),
                     (Section::Updates, Icon::Refresh, Text::SettingsUpdates),
                     (Section::Downloads, Icon::Downloads, Text::SettingsDownloads),
-                    (
-                        Section::Notifications,
-                        Icon::Chat,
-                        Text::SettingsNotifications,
-                    ),
                     (
                         Section::Accessibility,
                         Icon::Discover,
@@ -66,7 +60,6 @@ pub(crate) fn show(
                         Section::General => general(ui, view, settings),
                         Section::Updates => updates(ui, view, settings),
                         Section::Downloads => downloads(ui, view, settings),
-                        Section::Notifications => notifications(ui, view, settings),
                         Section::Accessibility => accessibility(ui, view, settings),
                     };
                     if changed {
@@ -175,21 +168,6 @@ fn downloads(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
     changed
 }
 
-fn notifications(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
-    let mut changed = false;
-    widgets::setting(
-        ui,
-        view.t(Text::Notifications),
-        Some(view.t(Text::NotificationsHint)),
-        |ui| {
-            changed |=
-                widgets::toggle(ui, &mut settings.notifications, view.t(Text::Notifications))
-                    .changed();
-        },
-    );
-    changed
-}
-
 fn accessibility(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
     let mut changed = false;
     widgets::setting(ui, view.t(Text::Motion), None, |ui| {
@@ -204,14 +182,5 @@ fn accessibility(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool 
         )
         .changed();
     });
-    widgets::setting(
-        ui,
-        view.t(Text::UiSounds),
-        Some(view.t(Text::UiSoundsHint)),
-        |ui| {
-            changed |=
-                widgets::toggle(ui, &mut settings.ui_sounds, view.t(Text::UiSounds)).changed();
-        },
-    );
     changed
 }

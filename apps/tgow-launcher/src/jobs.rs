@@ -1,8 +1,8 @@
 use std::fs::{self, File};
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -52,22 +52,32 @@ impl Jobs {
         downloads: PathBuf,
         apps: PathBuf,
         data: PathBuf,
+        limit: Arc<AtomicUsize>,
     ) -> Self {
         let (tasks, inbox) = mpsc::channel::<(Task, Arc<AtomicBool>)>();
         let (outbox, reports) = mpsc::channel();
         let _ = thread::Builder::new()
             .name("jobs".to_owned())
             .spawn(move || {
-                let worker = Worker {
+                let worker = Arc::new(Worker {
                     client: Client::new(),
                     downloads,
                     apps,
                     data,
-                    outbox,
+                    outbox: Mutex::new(outbox),
                     ctx,
-                };
+                    gate: Gate {
+                        limit,
+                        active: Mutex::new(0),
+                        changed: Condvar::new(),
+                    },
+                    installer: Mutex::new(()),
+                });
                 for (task, cancelled) in inbox {
-                    worker.handle(task, &cancelled);
+                    let worker = Arc::clone(&worker);
+                    let _ = thread::Builder::new()
+                        .name("job".to_owned())
+                        .spawn(move || worker.handle(task, &cancelled));
                 }
             });
         Self {
@@ -106,18 +116,60 @@ impl Jobs {
     }
 }
 
+struct Gate {
+    limit: Arc<AtomicUsize>,
+    active: Mutex<usize>,
+    changed: Condvar,
+}
+
+struct Pass<'a>(&'a Gate);
+
+impl Gate {
+    fn enter(&self) -> Pass<'_> {
+        let mut active = self.active.lock().unwrap_or_else(PoisonError::into_inner);
+        while *active >= self.limit.load(Ordering::Relaxed).max(1) {
+            active = self
+                .changed
+                .wait(active)
+                .unwrap_or_else(PoisonError::into_inner);
+        }
+        *active += 1;
+        Pass(self)
+    }
+}
+
+impl Drop for Pass<'_> {
+    fn drop(&mut self) {
+        let mut active = self.0.active.lock().unwrap_or_else(PoisonError::into_inner);
+        *active = active.saturating_sub(1);
+        self.0.changed.notify_all();
+    }
+}
+
 struct Worker {
     client: Client,
     downloads: PathBuf,
     apps: PathBuf,
     data: PathBuf,
-    outbox: Sender<Report>,
+    outbox: Mutex<Sender<Report>>,
     ctx: egui::Context,
+    gate: Gate,
+    installer: Mutex<()>,
 }
 
 impl Worker {
+    fn serial(&self) -> MutexGuard<'_, ()> {
+        self.installer
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
     fn send(&self, report: Report) {
-        let _ = self.outbox.send(report);
+        let _ = self
+            .outbox
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .send(report);
         self.ctx.request_repaint();
     }
 
@@ -140,6 +192,7 @@ impl Worker {
             Task::Uninstall(installation) => {
                 let app = installation.app.clone();
                 self.send(Report::Phase(app.clone(), Phase::Removing));
+                let _serial = self.serial();
                 match install::uninstall(&installation) {
                     Ok(()) => self.send(Report::Removed(app)),
                     Err(error) => self.send(Report::Failed(app, error.to_string())),
@@ -161,6 +214,7 @@ impl Worker {
 
     fn install(&self, order: &Order, cancelled: &AtomicBool) -> Result<Installation, String> {
         let file = self.fetch(order, cancelled)?;
+        let _serial = self.serial();
         self.send(Report::Phase(order.app.clone(), Phase::Installing));
         let target = Target {
             app: &order.app,
@@ -175,6 +229,10 @@ impl Worker {
     }
 
     fn fetch(&self, order: &Order, cancelled: &AtomicBool) -> Result<PathBuf, String> {
+        let _pass = self.gate.enter();
+        if cancelled.load(Ordering::Relaxed) {
+            return Err("cancelled".to_owned());
+        }
         let folder = self.downloads.join(&order.app);
         fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
         let file = folder.join(&order.asset.file);
