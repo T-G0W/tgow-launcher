@@ -114,7 +114,7 @@ fn update_modes(view: &View<'_>) -> [(UpdateMode, &'static str); 3] {
     [
         (UpdateMode::Automatic, view.t(Text::UpdateAutomatic)),
         (UpdateMode::Notify, view.t(Text::UpdateNotify)),
-        (UpdateMode::Off, view.t(Text::UpdateOff)),
+        (UpdateMode::Off, view.t(Text::Off)),
     ]
 }
 
@@ -170,17 +170,21 @@ fn downloads(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
 
 fn accessibility(ui: &mut Ui, view: &View<'_>, settings: &mut Settings) -> bool {
     let mut changed = false;
-    widgets::setting(ui, view.t(Text::Motion), None, |ui| {
-        changed |= widgets::segmented(
-            ui,
-            &mut settings.motion,
-            &[
-                (Motion::System, view.t(Text::MotionSystem)),
-                (Motion::Reduced, view.t(Text::MotionReduced)),
-                (Motion::Full, view.t(Text::MotionFull)),
-            ],
-        )
-        .changed();
-    });
+    widgets::setting(
+        ui,
+        view.t(Text::Motion),
+        Some(view.t(Text::MotionHint)),
+        |ui| {
+            changed |= widgets::segmented(
+                ui,
+                &mut settings.motion,
+                &[
+                    (Motion::Full, view.t(Text::On)),
+                    (Motion::Reduced, view.t(Text::Off)),
+                ],
+            )
+            .changed();
+        },
+    );
     changed
 }

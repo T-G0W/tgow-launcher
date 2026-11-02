@@ -374,7 +374,7 @@ fn updates(
             &[
                 (UpdateMode::Automatic, view.t(Text::UpdateAutomatic)),
                 (UpdateMode::Notify, view.t(Text::UpdateNotify)),
-                (UpdateMode::Off, view.t(Text::UpdateOff)),
+                (UpdateMode::Off, view.t(Text::Off)),
             ],
         )
         .changed();

@@ -31,7 +31,6 @@ pub(crate) struct Launcher {
     paths: Option<Paths>,
     platform: Platform,
     locale: Option<String>,
-    system_reduced_motion: bool,
     apps: Vec<App>,
     status: CatalogStatus,
     checked_at: Option<Instant>,
@@ -89,7 +88,6 @@ impl Launcher {
             paths,
             platform: tgow_platform::detect::platform(),
             locale,
-            system_reduced_motion: tgow_platform::prefers_reduced_motion(),
             apps: Vec::new(),
             status: CatalogStatus::Loading,
             checked_at: None,
@@ -400,7 +398,7 @@ impl eframe::App for Launcher {
 
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        let reduced = self.settings.motion.is_reduced(self.system_reduced_motion);
+        let reduced = self.settings.motion.is_reduced();
         tgow_ui::widgets::set_reduced_motion(&ctx, reduced);
         let language = self.language();
         let checked = self

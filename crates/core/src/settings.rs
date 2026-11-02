@@ -49,19 +49,15 @@ impl LanguageChoice {
 #[serde(rename_all = "lowercase")]
 pub enum Motion {
     #[default]
-    System,
-    Reduced,
+    #[serde(alias = "system")]
     Full,
+    Reduced,
 }
 
 impl Motion {
     #[must_use]
-    pub fn is_reduced(self, system_prefers_reduced: bool) -> bool {
-        match self {
-            Self::System => system_prefers_reduced,
-            Self::Reduced => true,
-            Self::Full => false,
-        }
+    pub fn is_reduced(self) -> bool {
+        self == Self::Reduced
     }
 }
 
@@ -126,7 +122,7 @@ impl Default for Settings {
         Self {
             schema: SCHEMA,
             language: LanguageChoice::System,
-            motion: Motion::System,
+            motion: Motion::Full,
             close_to_tray: true,
             launch_at_login: false,
             check_interval_minutes: 15,
@@ -249,10 +245,12 @@ mod tests {
     }
 
     #[test]
-    fn motion_follows_the_system_only_when_asked() {
-        assert!(Motion::System.is_reduced(true));
-        assert!(!Motion::System.is_reduced(false));
-        assert!(Motion::Reduced.is_reduced(false));
-        assert!(!Motion::Full.is_reduced(true));
+    fn motion_stays_on_unless_switched_off() {
+        assert!(!Settings::default().motion.is_reduced());
+        assert!(Motion::Reduced.is_reduced());
+        assert_eq!(
+            Settings::from_json(r#"{"motion":"system"}"#).motion,
+            Motion::Full
+        );
     }
 }
